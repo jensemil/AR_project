@@ -103,11 +103,11 @@ public class UtilAR {
 
 		for(int row=0; row<3; ++row)
 		{
-		   for(int col=0; col<3; ++col)
-		   {
-			   viewMatrix.put(row,col, rotArray[row*3+col]);
-		   }
-		   viewMatrix.put(row,3, tvecArray[row]);
+			for(int col=0; col<3; ++col)
+			{
+				viewMatrix.put(row,col, rotArray[row*3+col]);
+			}
+			viewMatrix.put(row,3, tvecArray[row]);
 		}
 		viewMatrix.put(3,0, homLine);
 		viewMatrix.inv().get(0,0, viewMatArr);
@@ -141,8 +141,8 @@ public class UtilAR {
 			viewCount++;
 			closed = false;
 		}else
-			if(matView.closed)
-				return;
+		if(matView.closed)
+			return;
 
 		matView.refresh(mat);
 	}
@@ -367,13 +367,25 @@ public class UtilAR {
 	 * The given mat must have 1 or 3 channels with one byte per channel (signed or unsigned).
 	 */
 	public static void imDrawBackground(Mat mat) {
-		Texture tex = bgTextures.get(mat.nativeObj);
+		long key = mat.width()*2000 + mat.height()*6+mat.channels();
+		Texture tex = bgTextures.get(key);
 		if(tex==null) {
 			tex = createMatTexture(mat);
-			bgTextures.put(mat.nativeObj,tex);
+			bgTextures.put(key,tex);
+			System.out.println(tex);
 		}
 		imToTexture(mat,tex);
 		texDrawBackground(tex);
+	}
+
+	/**
+	 * Disposes all automatically created textures.
+	 */
+	public static void disposeTextures() {
+		for(Texture tex:bgTextures.values()) {
+			tex.dispose();
+		}
+		bgTextures.clear();
 	}
 
 	//------------------------MAT-VIEW------------------------------------------

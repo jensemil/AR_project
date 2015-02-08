@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
@@ -21,6 +22,10 @@ import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 
+import org.opencv.imgproc.Imgproc;
+
+import static org.opencv.imgproc.Imgproc.blur;
+import static org.opencv.imgproc.Imgproc.cvtColor;
 import java.util.List;
 
 import static org.opencv.calib3d.Calib3d.*;
@@ -33,6 +38,8 @@ public class CVMain extends ApplicationAdapter {
     ModelBuilder modelBuilder;
     ModelBatch modelBatch;
 
+    private Mat videoInput;
+    private Mat detectedEdges;
     Environment environment;
     Material mat;
     Vector3 cubePosition;
@@ -74,6 +81,8 @@ public class CVMain extends ApplicationAdapter {
         // OpenCV
 
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        detectedEdges = Mat.eye(128, 128, CvType.CV_8UC1);
+        videoInput = Mat.eye(128, 128, CvType.CV_8UC1);
 
 
         eye = new MatOfPoint2f(); //.eye(128, 128, CvType.CV_8UC1);
@@ -106,7 +115,6 @@ public class CVMain extends ApplicationAdapter {
         else{
             System.out.println("Camera OK");
         }
-
     }
 
 	@Override
@@ -115,6 +123,7 @@ public class CVMain extends ApplicationAdapter {
                 Gdx.graphics.getHeight());
 		Gdx.gl.glClearColor(1, 1, 1, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+
 
 
 
@@ -181,8 +190,9 @@ public class CVMain extends ApplicationAdapter {
         }
 
 
-
         renderGraphics();
+
+        doCanny();
 
 	}
 
@@ -276,5 +286,13 @@ public class CVMain extends ApplicationAdapter {
 
 
 
+    }
+
+    private void doCanny() {
+        cap.read(videoInput);
+        Imgproc.cvtColor(videoInput, detectedEdges, Imgproc.COLOR_RGB2GRAY);
+        blur(detectedEdges, detectedEdges, new Size(3,3));
+        Imgproc.Canny(detectedEdges, detectedEdges, 50,100);
+        UtilAR.imShow(detectedEdges);
     }
 }
