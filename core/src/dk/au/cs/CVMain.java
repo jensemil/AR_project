@@ -15,8 +15,6 @@ import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
-import com.sun.tools.javac.util.Assert;
-import org.opencv.calib3d.Calib3d;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
@@ -33,30 +31,32 @@ import static org.opencv.calib3d.Calib3d.*;
 public class CVMain extends ApplicationAdapter {
 
     // 3D graphics
-    PerspectiveCamera cam;
-    Model cube;
-    ModelBuilder modelBuilder;
-    ModelBatch modelBatch;
+    private PerspectiveCamera cam;
+    private Model cube;
+    private ModelBuilder modelBuilder;
+    private ModelBatch modelBatch;
+    private ModelInstance cubeInstance;
 
     private Mat videoInput;
     private Mat detectedEdges;
-    Environment environment;
-    Material mat;
-    Vector3 cubePosition;
+    private Environment environment;
+    private Material mat;
+    private Vector3 cubePosition;
 
 
 
     // OpenCV
 
-    VideoCapture cap;
-    MatOfPoint2f eye;
-    MatOfPoint2f corners;
+    private VideoCapture cap;
+    private MatOfPoint2f eye;
+    private MatOfPoint2f corners;
 
-    MatOfPoint3f objectCoords;
-    MatOfPoint2f imgCoords;
+    private MatOfPoint3f objectCoords;
+    private MatOfPoint2f imgCoords;
 
-    Mat intrinsics;
-    MatOfDouble distortion;
+    private Mat intrinsics;
+    private MatOfDouble distortion;
+
 
 
     @Override
@@ -125,8 +125,6 @@ public class CVMain extends ApplicationAdapter {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
 
-
-
         // read camera data into "eye matrix"
         cap.read(eye);
 
@@ -150,10 +148,6 @@ public class CVMain extends ApplicationAdapter {
         UtilAR.imDrawBackground(eye);
 
         if (corners.size().height > 0) {
-
-
-            // printCorners();
-
 
             /*Mat m = corners.rowRange(0, 0);
             imgCoords.push_back(m);
@@ -192,7 +186,7 @@ public class CVMain extends ApplicationAdapter {
 
         renderGraphics();
 
-        doCanny();
+        //doCanny();
 
 	}
 
@@ -228,7 +222,6 @@ public class CVMain extends ApplicationAdapter {
 
         // render model objects
         modelBatch.begin(cam);
-        ModelInstance cubeInstance = new ModelInstance(cube);
         cubeInstance.transform.translate(cubePosition);
         modelBatch.render(cubeInstance, environment);
         modelBatch.end();
@@ -284,6 +277,7 @@ public class CVMain extends ApplicationAdapter {
         cube = modelBuilder.createBox(1f, 1f, 1f, mat, Usage.Position
                 | Usage.Normal | Usage.TextureCoordinates);
 
+        cubeInstance = new ModelInstance(cube);
 
 
     }
