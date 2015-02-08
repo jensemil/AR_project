@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
+import com.sun.tools.javac.util.Assert;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
@@ -84,7 +85,7 @@ public class CVMain extends ApplicationAdapter {
 
         objectCoords = new MatOfPoint3f();
         imgCoords = new MatOfPoint2f();
-        objectCoords.alloc(8);
+        objectCoords.alloc(4);
         imgCoords.alloc(4);
         intrinsics = UtilAR.getDefaultIntrinsicMatrix(eye.width(), eye.height());
         distortion = UtilAR.getDefaultDistortionCoefficients();
@@ -157,12 +158,23 @@ public class CVMain extends ApplicationAdapter {
             //System.out.println("imgCoords = " + imgCoords );
 
 
-            imgCoords = new MatOfPoint2f(corners.rowRange(0,3));
+            imgCoords = new MatOfPoint2f(corners.rowRange(0,4));
+
+
+            //objectCoords = new MatOfPoint3f(Mat.zeros(3, 1, CvType.CV_32F));
+
+            //System.out.println("imgSize=" + imgCoords.height());
+            //System.out.println("coordSize=" + objectCoords.height());
 
             Mat rotation = new Mat();
             Mat translation = new Mat();
 
+
+
             solvePnP(objectCoords, imgCoords, intrinsics, distortion, rotation, translation, false, ITERATIVE);
+
+            //printMat(rotation);
+            //System.out.println(rotation.toString());
 
             UtilAR.setCameraByRT(rotation, translation, cam);
 
@@ -174,11 +186,11 @@ public class CVMain extends ApplicationAdapter {
 
 	}
 
-    private void printCorners() {
-        double[] p0 = corners.get(0, 0);
-        double[] p1 = corners.get(1, 0);
-        double[] p2 = corners.get(2, 0);
-        double[] p3 = corners.get(3, 0);
+    private void printMat(Mat mat) {
+        double[] p0 = mat.get(0, 0);
+        double[] p1 = mat.get(1, 0);
+        double[] p2 = mat.get(2, 0);
+        //double[] p3 = mat.get(3, 0);
 
 
         String p0s, p1s, p2s, p3s;
@@ -187,13 +199,13 @@ public class CVMain extends ApplicationAdapter {
             p0s += p0[i] + ",";
             p1s += p1[i] + ",";
             p2s += p2[i] + ",";
-            p3s += p3[i] + ",";
+            //p3s += p3[i] + ",";
         }
 
         System.out.println("p0 = " + p0s);
         System.out.println("p1 = " + p1s);
         System.out.println("p2 = " + p2s);
-        System.out.println("p3 = " + p3s);
+        //System.out.println("p3 = " + p3s);
     }
 
     private void renderGraphics() {
@@ -261,6 +273,8 @@ public class CVMain extends ApplicationAdapter {
 
         cube = modelBuilder.createBox(1f, 1f, 1f, mat, Usage.Position
                 | Usage.Normal | Usage.TextureCoordinates);
+
+
 
     }
 }
