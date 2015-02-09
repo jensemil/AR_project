@@ -19,6 +19,8 @@ import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 
 import org.opencv.imgproc.Imgproc;
 
+import java.util.ArrayList;
+
 import static org.opencv.imgproc.Imgproc.blur;
 import static org.opencv.imgproc.Imgproc.cvtColor;
 
@@ -31,6 +33,7 @@ public class CVMain extends ApplicationAdapter {
     private Model cube;
     private ModelBuilder modelBuilder;
     private ModelBatch modelBatch;
+    private ModelInstance[][] cubes;
 
 
     private Mat videoInput;
@@ -71,6 +74,7 @@ public class CVMain extends ApplicationAdapter {
         modelBatch = new ModelBatch();
         // setup model and build cube
         modelBuilder = new ModelBuilder();
+        cubes = new ModelInstance[(int)Math.floor(chessboardSize.width / 2)][(int)chessboardSize.height - 1];
 
         setupEnvironment();
         setupCamera();
@@ -172,16 +176,15 @@ public class CVMain extends ApplicationAdapter {
 
             for (int i = 0; i < width; i++) {
                 for (int j = 0; j < height; j++) {
-                    ModelInstance cubeInstance = new ModelInstance(cube);
-                    cubeInstance.transform.idt();
+                    cubes[i][j].transform.idt();
 
-                    cubeInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(i / (float)width, j / (float)height, 0.1f, 1.0f)));
+                    cubes[i][j].materials.get(0).set(ColorAttribute.createDiffuse(new Color(i / (float)width, j / (float)height, 0.1f, 1.0f)));
                     int xOffset = 2 * i;
                     if (j % 2 == 1) xOffset += 1;
 
                     Vector3 position = new Vector3(originPosition.x + xOffset, originPosition.y, originPosition.z + j);
-                    cubeInstance.transform.translate(position);
-                    modelBatch.render(cubeInstance, environment);
+                    cubes[i][j].transform.translate(position);
+                    modelBatch.render(cubes[i][j], environment);
                 }
             }
 
@@ -235,7 +238,14 @@ public class CVMain extends ApplicationAdapter {
         cube = modelBuilder.createBox(1f, 1f, 1f, mat, Usage.Position
                 | Usage.Normal | Usage.TextureCoordinates);
 
+        double width = Math.floor(chessboardSize.width / 2);
+        double height = chessboardSize.height - 1;
 
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
+                cubes[i][j] = new ModelInstance(cube);
+            }
+        }
 
 
     }
