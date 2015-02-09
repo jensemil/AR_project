@@ -5,13 +5,10 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
-import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
@@ -24,7 +21,6 @@ import org.opencv.imgproc.Imgproc;
 
 import static org.opencv.imgproc.Imgproc.blur;
 import static org.opencv.imgproc.Imgproc.cvtColor;
-import java.util.List;
 
 import static org.opencv.calib3d.Calib3d.*;
 
@@ -35,13 +31,13 @@ public class CVMain extends ApplicationAdapter {
     private Model cube;
     private ModelBuilder modelBuilder;
     private ModelBatch modelBatch;
-    private ModelInstance cubeInstance;
+
 
     private Mat videoInput;
     private Mat detectedEdges;
     private Environment environment;
     private Material mat;
-    private Vector3 cubePosition;
+    private Vector3 originPosition;
 
     private boolean foundBoard = false;
 
@@ -69,7 +65,7 @@ public class CVMain extends ApplicationAdapter {
 
         // Graphics
 
-        cubePosition = new Vector3(0.5f, 0.5f, 0.5f);
+        originPosition = new Vector3(0.5f, 0.5f, 0.5f);
 
         // init model batch - used for rendering
         modelBatch = new ModelBatch();
@@ -95,7 +91,7 @@ public class CVMain extends ApplicationAdapter {
         cap.set(Highgui.CV_CAP_PROP_FRAME_WIDTH,SCREEN_WIDTH);
         cap.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT,SCREEN_HEIGHT);
 
-        // get intrinsics after view capture dimensions set
+        // get intrinsics after view capture dimensions are set
         objectCoords = new MatOfPoint3f();
         objectCoords.alloc((int)numOfCoords);
         intrinsics = UtilAR.getDefaultIntrinsicMatrix(SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -109,10 +105,10 @@ public class CVMain extends ApplicationAdapter {
         }
 
         if(!cap.isOpened()){
-            System.out.println("Camera Error");
+            System.out.println("Video Camera Error");
         }
         else{
-            System.out.println("Camera OK");
+            System.out.println("Video Camera OK");
         }
     }
 
@@ -171,9 +167,24 @@ public class CVMain extends ApplicationAdapter {
         // render model objects
         if(foundBoard) {
             modelBatch.begin(cam);
-            cubeInstance.transform.idt();
-            cubeInstance.transform.translate(cubePosition);
-            modelBatch.render(cubeInstance, environment);
+            double width = Math.floor(chessboardSize.width / 2);
+            double height = chessboardSize.height - 1;
+
+            for (int i = 0; i < width; i++) {
+                for (int j = 0; j < height; j++) {
+                    ModelInstance cubeInstance = new ModelInstance(cube);
+                    cubeInstance.transform.idt();
+
+                    cubeInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(i / (float)width, j / (float)height, 0.1f, 1.0f)));
+                    int xOffset = 2 * i;
+                    if (j % 2 == 1) xOffset += 1;
+
+                    Vector3 position = new Vector3(originPosition.x + xOffset, originPosition.y, originPosition.z + j);
+                    cubeInstance.transform.translate(position);
+                    modelBatch.render(cubeInstance, environment);
+                }
+            }
+
             modelBatch.end();
         }
     }
@@ -204,7 +215,7 @@ public class CVMain extends ApplicationAdapter {
         cam = new PerspectiveCamera(40, Gdx.graphics.getWidth(),
                 Gdx.graphics.getHeight());
         cam.position.set(3f, 3f, 3f);
-        cam.lookAt(cubePosition);
+        cam.lookAt(originPosition);
         cam.up.set(0, 1, 0);
         System.out.println("up vector = " + cam.up);
         cam.near = .0001f;
@@ -215,16 +226,16 @@ public class CVMain extends ApplicationAdapter {
     private void setupCube() {
 
         // setup material with texture
-        mat = new Material(ColorAttribute.createDiffuse(new Color(0.1f, 0.1f,
-                0.1f, 1.0f)));
+        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
+                0.3f, 1.0f)));
         // blending
         mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
-                GL20.GL_ONE_MINUS_SRC_ALPHA, 1.0f));
+                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.8f));
 
         cube = modelBuilder.createBox(1f, 1f, 1f, mat, Usage.Position
                 | Usage.Normal | Usage.TextureCoordinates);
 
-        cubeInstance = new ModelInstance(cube);
+
 
 
     }
