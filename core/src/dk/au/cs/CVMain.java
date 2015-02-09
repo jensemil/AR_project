@@ -43,7 +43,7 @@ public class CVMain extends ApplicationAdapter {
     private Material mat;
     private Vector3 cubePosition;
 
-
+    private boolean foundBoard = false;
 
     // OpenCV
 
@@ -142,11 +142,11 @@ public class CVMain extends ApplicationAdapter {
 	}
 
     private void handleCheckboard() {
-        // find chessboard in the rendered image
-        boolean found = findChessboardCorners(eye, chessboardSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
+        // find chessboard in the rendered image bool is set to render images.
+        foundBoard = findChessboardCorners(eye, chessboardSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
 
         // draw on chessboard
-        //drawChessboardCorners(eye, chessboardSize, corners, found);
+        //drawChessboardCorners(eye, chessboardSize, corners, foundBoard);
 
         if (corners.size().height > 0) {
 
@@ -166,6 +166,8 @@ public class CVMain extends ApplicationAdapter {
 
             if (corners.size().height < numOfCoords) {
                 System.err.println("Not all of the chessboard is visible");
+                //We should not render anything then.
+                foundBoard = false;
             } else {
                 solvePnP(objectCoords, corners, intrinsics, distortion, rotation, translation, false, ITERATIVE);
 
@@ -181,11 +183,13 @@ public class CVMain extends ApplicationAdapter {
 
 
         // render model objects
-        modelBatch.begin(cam);
-        cubeInstance.transform.idt();
-        cubeInstance.transform.translate(cubePosition);
-        modelBatch.render(cubeInstance, environment);
-        modelBatch.end();
+        if(foundBoard) {
+            modelBatch.begin(cam);
+            cubeInstance.transform.idt();
+            cubeInstance.transform.translate(cubePosition);
+            modelBatch.render(cubeInstance, environment);
+            modelBatch.end();
+        }
 
 
     }
