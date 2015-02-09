@@ -110,6 +110,12 @@ public class CVMain extends ApplicationAdapter {
         intrinsics = UtilAR.getDefaultIntrinsicMatrix(SCREEN_WIDTH, SCREEN_HEIGHT);
         distortion = UtilAR.getDefaultDistortionCoefficients();
 
+        //Ensure Camera is ready!
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
         if(!cap.isOpened()){
             System.out.println("Camera Error");
@@ -139,9 +145,6 @@ public class CVMain extends ApplicationAdapter {
         // draw on chessboard
         //drawChessboardCorners(eye, chessboardSize, corners, found);
 
-        // render eye texture to screen
-        UtilAR.imDrawBackground(eye);
-
         if (corners.size().height > 0) {
 
 
@@ -149,18 +152,13 @@ public class CVMain extends ApplicationAdapter {
 
             double scale = 1.0; // the unit of the chessboard
 
-            //System.out.println("\n------------ New matrix");
 
             for (int j = 0; j < corners.size().height; j++) {
-                //double[] cornerPoint = corners.get(j, 0);
                 double row = Math.floor(j / chessboardSize.width);
                 double col = j % chessboardSize.width;
 
                 // set Y = 0, because we usually draw it with Y as the up-axis
                 objectCoords.put(j, 0, scale * col, 0.0, scale * row);
-                //System.out.print("[" + row + ", " + 0.0 + ", " + col + "]");
-                //if (col == chessboardSize.width-1)
-                //    System.out.print(System.lineSeparator());
             }
 
             Mat rotation = new Mat();
@@ -173,10 +171,6 @@ public class CVMain extends ApplicationAdapter {
 
 
                 UtilAR.setCameraByRT(rotation, translation, cam);
-
-
-                //System.out.println("Campos " + cam.position);
-                //System.out.println("cam dist  " + Math.sqrt(cam.position.x*cam.position.x + cam.position.y*cam.position.y + cam.position.z*cam.position.z));
 
             }
 
