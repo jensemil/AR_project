@@ -69,9 +69,7 @@ public class CVMain extends ApplicationAdapter {
 
         // Graphics
 
-        //cubePosition = new Vector3(0.f, 0.f, 0.f);
         cubePosition = new Vector3(0.5f, 0.5f, 0.5f);
-
 
         // init model batch - used for rendering
         modelBatch = new ModelBatch();
@@ -81,8 +79,6 @@ public class CVMain extends ApplicationAdapter {
         setupEnvironment();
         setupCamera();
         setupCube();
-
-
 
         // OpenCV
 
@@ -94,12 +90,10 @@ public class CVMain extends ApplicationAdapter {
         eye = new MatOfPoint2f(); //.eye(128, 128, CvType.CV_8UC1);
         corners = new MatOfPoint2f();
 
-
         // setup video capture
         cap = new VideoCapture(0);
         cap.set(Highgui.CV_CAP_PROP_FRAME_WIDTH,SCREEN_WIDTH);
         cap.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT,SCREEN_HEIGHT);
-
 
         // get intrinsics after view capture dimensions set
         objectCoords = new MatOfPoint3f();
@@ -145,9 +139,6 @@ public class CVMain extends ApplicationAdapter {
         // find chessboard in the rendered image bool is set to render images.
         foundBoard = findChessboardCorners(eye, chessboardSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
 
-        // draw on chessboard
-        //drawChessboardCorners(eye, chessboardSize, corners, foundBoard);
-
         if (corners.size().height > 0) {
 
             double scale = 1.0; // the unit of the chessboard
@@ -170,18 +161,13 @@ public class CVMain extends ApplicationAdapter {
                 foundBoard = false;
             } else {
                 solvePnP(objectCoords, corners, intrinsics, distortion, rotation, translation, false, ITERATIVE);
-
-
                 UtilAR.setCameraByRT(rotation, translation, cam);
-
             }
 
         }
     }
 
     private void renderGraphics() {
-
-
         // render model objects
         if(foundBoard) {
             modelBatch.begin(cam);
@@ -190,8 +176,6 @@ public class CVMain extends ApplicationAdapter {
             modelBatch.render(cubeInstance, environment);
             modelBatch.end();
         }
-
-
     }
 
     @Override
@@ -231,11 +215,8 @@ public class CVMain extends ApplicationAdapter {
     private void setupCube() {
 
         // setup material with texture
-        //img = new Texture("emo2.jpg");
-        //img.bind();
-        mat = new Material(ColorAttribute.createDiffuse(new Color(0.9f, 0.9f,
-                0.9f, 1.0f)));
-        //mat.set(new TextureAttribute(TextureAttribute.Diffuse, img));
+        mat = new Material(ColorAttribute.createDiffuse(new Color(0.1f, 0.1f,
+                0.1f, 1.0f)));
         // blending
         mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
                 GL20.GL_ONE_MINUS_SRC_ALPHA, 1.0f));
@@ -259,11 +240,7 @@ public class CVMain extends ApplicationAdapter {
 
 
     private void printMat(Mat mat) {
-
         System.out.println("------------------------ Print matrix: -------");
-
-
-
         for (int j = 0; j < mat.size().height; j++) {
 
             String p0s = "";
@@ -274,12 +251,7 @@ public class CVMain extends ApplicationAdapter {
             }
             System.out.println("Row " + j + ": " + p0s);
         }
-
-
-
-        //System.out.println("p3 = " + p3s);
     }
-
 }
 
 
