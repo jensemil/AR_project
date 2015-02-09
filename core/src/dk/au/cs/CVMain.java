@@ -52,7 +52,6 @@ public class CVMain extends ApplicationAdapter {
     private MatOfPoint2f corners;
 
     private MatOfPoint3f objectCoords;
-    private MatOfPoint2f imgCoords;
 
     private Mat intrinsics;
     private MatOfDouble distortion;
@@ -104,9 +103,7 @@ public class CVMain extends ApplicationAdapter {
 
         // get intrinsics after view capture dimensions set
         objectCoords = new MatOfPoint3f();
-        imgCoords = new MatOfPoint2f();
         objectCoords.alloc((int)numOfCoords);
-        imgCoords.alloc((int)numOfCoords);
         intrinsics = UtilAR.getDefaultIntrinsicMatrix(SCREEN_WIDTH, SCREEN_HEIGHT);
         distortion = UtilAR.getDefaultDistortionCoefficients();
 
@@ -135,10 +132,16 @@ public class CVMain extends ApplicationAdapter {
 
         // read camera data into "eye matrix"
         cap.read(eye);
-
         // render eye texture
         UtilAR.imDrawBackground(eye);
+        handleCheckboard();
+        renderGraphics();
 
+        //doCanny();
+
+	}
+
+    private void handleCheckboard() {
         // find chessboard in the rendered image
         boolean found = findChessboardCorners(eye, chessboardSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
 
@@ -146,9 +149,6 @@ public class CVMain extends ApplicationAdapter {
         //drawChessboardCorners(eye, chessboardSize, corners, found);
 
         if (corners.size().height > 0) {
-
-
-            imgCoords = new MatOfPoint2f(corners);
 
             double scale = 1.0; // the unit of the chessboard
 
@@ -164,10 +164,10 @@ public class CVMain extends ApplicationAdapter {
             Mat rotation = new Mat();
             Mat translation = new Mat();
 
-            if (imgCoords.size().height < numOfCoords) {
+            if (corners.size().height < numOfCoords) {
                 System.err.println("Not all of the chessboard is visible");
             } else {
-                solvePnP(objectCoords, imgCoords, intrinsics, distortion, rotation, translation, false, ITERATIVE);
+                solvePnP(objectCoords, corners, intrinsics, distortion, rotation, translation, false, ITERATIVE);
 
 
                 UtilAR.setCameraByRT(rotation, translation, cam);
@@ -175,13 +175,7 @@ public class CVMain extends ApplicationAdapter {
             }
 
         }
-
-
-        renderGraphics();
-
-        //doCanny();
-
-	}
+    }
 
     private void renderGraphics() {
 
