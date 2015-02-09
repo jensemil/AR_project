@@ -57,6 +57,12 @@ public class CVMain extends ApplicationAdapter {
     private Mat intrinsics;
     private MatOfDouble distortion;
 
+    private Size chessboardSize = new Size(9,6);
+    private double numOfCoords = chessboardSize.width*chessboardSize.height;
+
+    private static int SCREEN_WIDTH = 640;
+    private static int SCREEN_HEIGHT = 480;
+
 
 
     @Override
@@ -64,7 +70,8 @@ public class CVMain extends ApplicationAdapter {
 
         // Graphics
 
-        cubePosition = new Vector3(1.0f, 0.5f, 0.75f);
+        //cubePosition = new Vector3(0.f, 0.f, 0.f);
+        cubePosition = new Vector3(0.5f, 0.5f, 0.5f);
 
 
         // init model batch - used for rendering
@@ -88,26 +95,21 @@ public class CVMain extends ApplicationAdapter {
         eye = new MatOfPoint2f(); //.eye(128, 128, CvType.CV_8UC1);
         corners = new MatOfPoint2f();
 
-        eye.alloc(1);
-        corners.alloc(1);
-
-
-        objectCoords = new MatOfPoint3f();
-        imgCoords = new MatOfPoint2f();
-        objectCoords.alloc(4);
-        imgCoords.alloc(4);
-        intrinsics = UtilAR.getDefaultIntrinsicMatrix(eye.width(), eye.height());
-        distortion = UtilAR.getDefaultDistortionCoefficients();
-
-
 
         // setup video capture
         cap = new VideoCapture(0);
-        cap.set(Highgui.CV_CAP_PROP_FRAME_WIDTH,640);
-        cap.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT,480);
-        cap.read(eye);
+        cap.set(Highgui.CV_CAP_PROP_FRAME_WIDTH,SCREEN_WIDTH);
+        cap.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT,SCREEN_HEIGHT);
 
-        System.out.println("eye = " + eye);
+
+        // get intrinsics after view capture dimensions set
+        objectCoords = new MatOfPoint3f();
+        imgCoords = new MatOfPoint2f();
+        objectCoords.alloc((int)numOfCoords);
+        imgCoords.alloc((int)numOfCoords);
+        intrinsics = UtilAR.getDefaultIntrinsicMatrix(SCREEN_WIDTH, SCREEN_HEIGHT);
+        distortion = UtilAR.getDefaultDistortionCoefficients();
+
 
         if(!cap.isOpened()){
             System.out.println("Camera Error");
@@ -132,54 +134,51 @@ public class CVMain extends ApplicationAdapter {
         UtilAR.imDrawBackground(eye);
 
         // find chessboard in the rendered image
-        Size patternSize = new Size(9, 6);
-        boolean found = findChessboardCorners(eye, patternSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
-
-        /*if (found) {
-            System.out.println("chessboard identified");
-        } else {
-            System.err.println("chessboard not identified");
-        }                          */
+        boolean found = findChessboardCorners(eye, chessboardSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
 
         // draw on chessboard
-        drawChessboardCorners(eye, patternSize, corners, found);
+        //drawChessboardCorners(eye, chessboardSize, corners, found);
 
         // render eye texture to screen
         UtilAR.imDrawBackground(eye);
 
         if (corners.size().height > 0) {
 
-            /*Mat m = corners.rowRange(0, 0);
-            imgCoords.push_back(m);
-            m = corners.rowRange(1, 1);
-            imgCoords.push_back(m);
-            m = corners.rowRange(2, 2);
-            imgCoords.push_back(m);
-            m = corners.rowRange(3, 3);
-            imgCoords.push_back(m);*/
 
-            //System.out.println("imgCoords = " + imgCoords );
+            imgCoords = new MatOfPoint2f(corners);
 
+            double scale = 1.0; // the unit of the chessboard
 
-            imgCoords = new MatOfPoint2f(corners.rowRange(0,4));
+            //System.out.println("\n------------ New matrix");
 
+            for (int j = 0; j < corners.size().height; j++) {
+                //double[] cornerPoint = corners.get(j, 0);
+                double row = Math.floor(j / chessboardSize.width);
+                double col = j % chessboardSize.width;
 
-            //objectCoords = new MatOfPoint3f(Mat.zeros(3, 1, CvType.CV_32F));
-
-            //System.out.println("imgSize=" + imgCoords.height());
-            //System.out.println("coordSize=" + objectCoords.height());
+                // set Y = 0, because we usually draw it with Y as the up-axis
+                objectCoords.put(j, 0, scale * col, 0.0, scale * row);
+                //System.out.print("[" + row + ", " + 0.0 + ", " + col + "]");
+                //if (col == chessboardSize.width-1)
+                //    System.out.print(System.lineSeparator());
+            }
 
             Mat rotation = new Mat();
             Mat translation = new Mat();
 
+            if (imgCoords.size().height < numOfCoords) {
+                System.err.println("Not all of the chessboard is visible");
+            } else {
+                solvePnP(objectCoords, imgCoords, intrinsics, distortion, rotation, translation, false, ITERATIVE);
 
 
-            solvePnP(objectCoords, imgCoords, intrinsics, distortion, rotation, translation, false, ITERATIVE);
+                UtilAR.setCameraByRT(rotation, translation, cam);
 
-            //printMat(rotation);
-            //System.out.println(rotation.toString());
 
-            UtilAR.setCameraByRT(rotation, translation, cam);
+                //System.out.println("Campos " + cam.position);
+                //System.out.println("cam dist  " + Math.sqrt(cam.position.x*cam.position.x + cam.position.y*cam.position.y + cam.position.z*cam.position.z));
+
+            }
 
         }
 
@@ -190,38 +189,12 @@ public class CVMain extends ApplicationAdapter {
 
 	}
 
-    private void printMat(Mat mat) {
-        double[] p0 = mat.get(0, 0);
-        double[] p1 = mat.get(1, 0);
-        double[] p2 = mat.get(2, 0);
-        //double[] p3 = mat.get(3, 0);
-
-
-        String p0s, p1s, p2s, p3s;
-        p0s = p1s = p2s = p3s = "";
-        for (int i = 0; i < p0.length; i++) {
-            p0s += p0[i] + ",";
-            p1s += p1[i] + ",";
-            p2s += p2[i] + ",";
-            //p3s += p3[i] + ",";
-        }
-
-        System.out.println("p0 = " + p0s);
-        System.out.println("p1 = " + p1s);
-        System.out.println("p2 = " + p2s);
-        //System.out.println("p3 = " + p3s);
-    }
-
     private void renderGraphics() {
-
-
-        cam.lookAt(cubePosition);
-        cam.up.set(0, 1, 0);
-        cam.update();
 
 
         // render model objects
         modelBatch.begin(cam);
+        cubeInstance.transform.idt();
         cubeInstance.transform.translate(cubePosition);
         modelBatch.render(cubeInstance, environment);
         modelBatch.end();
@@ -231,6 +204,7 @@ public class CVMain extends ApplicationAdapter {
 
     @Override
     public void dispose() {
+        modelBatch.dispose();
         cap.release();
     }
 
@@ -251,13 +225,13 @@ public class CVMain extends ApplicationAdapter {
 
     private void setupCamera() {
         // setup camera
-        cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(),
+        cam = new PerspectiveCamera(40, Gdx.graphics.getWidth(),
                 Gdx.graphics.getHeight());
         cam.position.set(3f, 3f, 3f);
         cam.lookAt(cubePosition);
         cam.up.set(0, 1, 0);
         System.out.println("up vector = " + cam.up);
-        cam.near = 1f;
+        cam.near = .0001f;
         cam.far = 300f;
         cam.update();
     }
@@ -289,4 +263,31 @@ public class CVMain extends ApplicationAdapter {
         Imgproc.Canny(detectedEdges, detectedEdges, 50,100);
         UtilAR.imShow(detectedEdges);
     }
+
+
+
+    private void printMat(Mat mat) {
+
+        System.out.println("------------------------ Print matrix: -------");
+
+
+
+        for (int j = 0; j < mat.size().height; j++) {
+
+            String p0s = "";
+            double[] p0 = mat.get(j , 0);
+            for (int i = 0; i < p0.length; i++) {
+                p0s += p0[i] + ",";
+
+            }
+            System.out.println("Row " + j + ": " + p0s);
+        }
+
+
+
+        //System.out.println("p3 = " + p3s);
+    }
+
 }
+
+
