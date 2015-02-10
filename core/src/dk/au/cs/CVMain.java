@@ -58,7 +58,8 @@ public class CVMain extends ApplicationAdapter {
     private static int SCREEN_WIDTH = 640;
     private static int SCREEN_HEIGHT = 480;
 
-
+    private double width = Math.floor(chessboardSize.width / 2);
+    private double height = chessboardSize.height - 1;
 
     @Override
 	public void create () {
@@ -110,6 +111,7 @@ public class CVMain extends ApplicationAdapter {
         else{
             System.out.println("Video Camera OK");
         }
+
     }
 
 	@Override
@@ -124,14 +126,14 @@ public class CVMain extends ApplicationAdapter {
         cap.read(eye);
         // render eye texture
         UtilAR.imDrawBackground(eye);
-        handleCheckboard();
+        handleChessboard();
         renderGraphics();
 
         //doCanny();
 
 	}
 
-    private void handleCheckboard() {
+    private void handleChessboard() {
         // find chessboard in the rendered image bool is set to render images.
         foundBoard = findChessboardCorners(eye, chessboardSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
 
@@ -167,8 +169,7 @@ public class CVMain extends ApplicationAdapter {
         // render model objects
         if(foundBoard) {
             modelBatch.begin(cam);
-            double width = Math.floor(chessboardSize.width / 2);
-            double height = chessboardSize.height - 1;
+
 
             for (int i = 0; i < width; i++) {
                 for (int j = 0; j < height; j++) {
