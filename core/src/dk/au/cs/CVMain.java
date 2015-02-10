@@ -2,6 +2,7 @@ package dk.au.cs;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
@@ -12,6 +13,9 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.Input.Keys;
+import com.badlogic.gdx.InputAdapter;
+import org.opencv.calib3d.Calib3d;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
@@ -20,6 +24,7 @@ import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.opencv.imgproc.Imgproc.blur;
 import static org.opencv.imgproc.Imgproc.cvtColor;
@@ -49,6 +54,9 @@ public class CVMain extends ApplicationAdapter {
     private VideoCapture cap;
     private MatOfPoint2f eye;
     private MatOfPoint2f corners;
+
+    private List<Mat> calibrationImgs = new ArrayList<Mat>();
+    private List<Mat> calibrationObjectPoints = new ArrayList<Mat>();
 
     private MatOfPoint3f objectCoords;
 
@@ -80,6 +88,7 @@ public class CVMain extends ApplicationAdapter {
         setupEnvironment();
         setupCamera();
         setupCube();
+        setupEventHandling();
 
         // OpenCV
 
@@ -176,6 +185,33 @@ public class CVMain extends ApplicationAdapter {
         }
     }
 
+    private void doCalibration() {
+        System.out.println("doCalibration");
+        Calib3d.calibrateCamera(
+                calibrationObjectPoints,
+                calibrationImgs,
+                new Size(SCREEN_WIDTH, SCREEN_HEIGHT),
+                intrinsics,
+                distortion,
+                new ArrayList<Mat>(),   //rvecs
+                new ArrayList<Mat>(),
+                Calib3d.CALIB_USE_INTRINSIC_GUESS   //tvecs
+
+        );
+        calibrationImgs = new ArrayList<Mat>();
+        calibrationObjectPoints = new ArrayList<Mat>();
+    }
+
+    private void takeSnap() {
+        System.out.println("takeSnap");
+        MatOfPoint2f calibPoints = new MatOfPoint2f();
+        boolean success = findChessboardCorners(eye, chessboardSize, calibPoints, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
+        if (success) {
+            calibrationImgs.add(calibPoints);
+            calibrationObjectPoints.add(objectCoords);
+        }
+    }
+
     private void renderGraphics() {
         // render model objects
         if(foundBoard) {
@@ -218,6 +254,26 @@ public class CVMain extends ApplicationAdapter {
                 0.4f, 0.4f, 1f));
         environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f,
                 -0.8f, -0.2f));
+
+    }
+
+    private void setupEventHandling() {
+        Gdx.input.setInputProcessor(new InputAdapter() {
+            @Override
+            public boolean keyUp(final int keycode) {
+                switch (keycode) {
+                    case Keys.SPACE:
+                        doCalibration();
+                        break;
+                    case Keys.S:
+                        takeSnap();
+                    default:
+                        break;
+
+                }
+                return true;
+            }
+        });
 
     }
 
