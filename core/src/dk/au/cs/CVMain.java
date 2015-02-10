@@ -137,6 +137,13 @@ public class CVMain extends ApplicationAdapter {
 
 	}
 
+    @Override
+    public void resize (int width, int height) {
+        cam.viewportWidth = width;
+        cam.viewportHeight = height;
+        cam.update();
+    }
+
     private void handleChessboard() {
         // find chessboard in the rendered image bool is set to render images.
         foundBoard = findChessboardCorners(eye, chessboardSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
@@ -238,9 +245,6 @@ public class CVMain extends ApplicationAdapter {
 
         cube = modelBuilder.createBox(1f, 1f, 1f, mat, Usage.Position
                 | Usage.Normal | Usage.TextureCoordinates);
-
-        double width = Math.floor(chessboardSize.width / 2);
-        double height = chessboardSize.height - 1;
 
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < height; j++) {
