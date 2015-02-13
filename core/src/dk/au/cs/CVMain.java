@@ -1,5 +1,6 @@
 package dk.au.cs;
 
+import apple.laf.JRSUIConstants;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
@@ -48,6 +49,7 @@ public class CVMain extends ApplicationAdapter {
     private Vector3 originPosition;
 
     private boolean foundBoard = false;
+    private DirectionalLight dirLight;
 
     // OpenCV
 
@@ -59,6 +61,7 @@ public class CVMain extends ApplicationAdapter {
     private List<Mat> calibrationObjectPoints = new ArrayList<Mat>();
 
     private MatOfPoint3f objectCoords;
+    private MatOfPoint3f calibObjectCoords;
 
     private Mat intrinsics;
     private MatOfDouble distortion;
@@ -85,10 +88,12 @@ public class CVMain extends ApplicationAdapter {
         modelBuilder = new ModelBuilder();
         cubes = new ModelInstance[(int)Math.floor(chessboardSize.width / 2)][(int)chessboardSize.height - 1];
 
-        setupEnvironment();
         setupCamera();
+        setupEnvironment();
         setupCube();
         setupEventHandling();
+
+
 
         // OpenCV
 
@@ -107,7 +112,9 @@ public class CVMain extends ApplicationAdapter {
 
         // get intrinsics after view capture dimensions are set
         objectCoords = new MatOfPoint3f();
+        calibObjectCoords = new MatOfPoint3f();
         objectCoords.alloc((int)numOfCoords);
+        calibObjectCoords.alloc((int)numOfCoords);
         intrinsics = UtilAR.getDefaultIntrinsicMatrix(SCREEN_WIDTH, SCREEN_HEIGHT);
         distortion = UtilAR.getDefaultDistortionCoefficients();
 
@@ -125,6 +132,8 @@ public class CVMain extends ApplicationAdapter {
             System.out.println("Video Camera OK");
         }
 
+
+
     }
 
 	@Override
@@ -134,6 +143,8 @@ public class CVMain extends ApplicationAdapter {
 		Gdx.gl.glClearColor(1, 1, 1, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
+
+        dirLight = getDirectionToCubes();
 
         // read camera data into "eye matrix"
         cap.read(eye);
@@ -157,7 +168,7 @@ public class CVMain extends ApplicationAdapter {
         // find chessboard in the rendered image bool is set to render images.
         foundBoard = findChessboardCorners(eye, chessboardSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
 
-        if (corners.size().height > 0) {
+        if (foundBoard) {
 
             double scale = 1.0; // the unit of the chessboard
 
@@ -168,19 +179,20 @@ public class CVMain extends ApplicationAdapter {
 
                 // set Y = 0, because we usually draw it with Y as the up-axis
                 objectCoords.put(j, 0, scale * col, 0.0, scale * row);
+                calibObjectCoords.put(j, 0, scale * col, scale * row, 0.0);
             }
 
             Mat rotation = new Mat();
             Mat translation = new Mat();
 
-            if (corners.size().height < numOfCoords) {
+            /*if (corners.size().height < numOfCoords) {
                 System.err.println("Not all of the chessboard is visible");
                 //We should not render anything then.
                 foundBoard = false;
-            } else {
-                solvePnP(objectCoords, corners, intrinsics, distortion, rotation, translation, false, ITERATIVE);
-                UtilAR.setCameraByRT(rotation, translation, cam);
-            }
+            } else {*/
+            solvePnP(objectCoords, corners, intrinsics, distortion, rotation, translation, false, ITERATIVE);
+            UtilAR.setCameraByRT(rotation, translation, cam);
+            //}
 
         }
     }
@@ -208,7 +220,7 @@ public class CVMain extends ApplicationAdapter {
         boolean success = findChessboardCorners(eye, chessboardSize, calibPoints, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
         if (success) {
             calibrationImgs.add(calibPoints);
-            calibrationObjectPoints.add(objectCoords);
+            calibrationObjectPoints.add(calibObjectCoords);
         }
     }
 
@@ -252,9 +264,17 @@ public class CVMain extends ApplicationAdapter {
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f,
                 0.4f, 0.4f, 1f));
-        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f,
-                -0.8f, -0.2f));
 
+        dirLight = new DirectionalLight();
+        dirLight = getDirectionToCubes();
+        environment.add(dirLight); //-1f, -0.8f, -0.2f)); //
+
+    }
+
+    private DirectionalLight getDirectionToCubes() {
+        Vector3 dir = new Vector3(originPosition.x - cam.position.x, originPosition.y - cam.position.y, originPosition.z - cam.position.z);
+        dir = dir.nor();
+        return dirLight.set(0.8f, 0.8f, 0.8f, dir.x, dir.y, dir.z);
     }
 
     private void setupEventHandling() {
@@ -297,7 +317,7 @@ public class CVMain extends ApplicationAdapter {
                 0.3f, 1.0f)));
         // blending
         mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
-                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.8f));
+                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
 
         cube = modelBuilder.createBox(1f, 1f, 1f, mat, Usage.Position
                 | Usage.Normal | Usage.TextureCoordinates);
