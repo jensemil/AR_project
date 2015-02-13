@@ -26,6 +26,7 @@ import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static org.opencv.imgproc.Imgproc.blur;
 import static org.opencv.imgproc.Imgproc.cvtColor;
@@ -224,11 +225,14 @@ public class CVMain extends ApplicationAdapter {
         }
     }
 
+    int count = 0;
+
     private void renderGraphics() {
         // render model objects
         if(foundBoard) {
             modelBatch.begin(cam);
 
+            count++;
 
             for (int i = 0; i < width; i++) {
                 for (int j = 0; j < height; j++) {
@@ -238,8 +242,19 @@ public class CVMain extends ApplicationAdapter {
                     int xOffset = 2 * i;
                     if (j % 2 == 1) xOffset += 1;
 
-                    Vector3 position = new Vector3(originPosition.x + xOffset, originPosition.y, originPosition.z + j);
+                    // 3) translating to unique cube position
+                    Vector3 position = new Vector3(originPosition.x + xOffset, 0, originPosition.z + j);
                     cubes[i][j].transform.translate(position);
+
+                    // 2) scale
+                    //Random random = new Random();
+                    //int randomness = random.nextInt(2) + 1;
+                    float yScale = (float)Math.sin((count + 5*j) / 30f * Math.PI) * (float)Math.cos((count + 5*i) / 30f * Math.PI) + 1.05f;
+                    cubes[i][j].transform.scale(1f, yScale, 1f);
+
+                    // 1) translate before scale
+                    cubes[i][j].transform.translate(0f, 0.5f, 0f);
+
                     modelBatch.render(cubes[i][j], environment);
                 }
             }
