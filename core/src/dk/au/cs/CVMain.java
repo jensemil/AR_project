@@ -1,6 +1,6 @@
 package dk.au.cs;
 
-import apple.laf.JRSUIConstants;
+//import apple.laf.JRSUIConstants;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
@@ -237,8 +237,6 @@ public class CVMain extends ApplicationAdapter {
             for (int i = 0; i < width; i++) {
                 for (int j = 0; j < height; j++) {
                     cubes[i][j].transform.idt();
-
-                    cubes[i][j].materials.get(0).set(ColorAttribute.createDiffuse(new Color(i / (float)width, j / (float)height, 0.1f, 1.0f)));
                     int xOffset = 2 * i;
                     if (j % 2 == 1) xOffset += 1;
 
@@ -340,6 +338,7 @@ public class CVMain extends ApplicationAdapter {
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < height; j++) {
                 cubes[i][j] = new ModelInstance(cube);
+                cubes[i][j].materials.get(0).set(ColorAttribute.createDiffuse(new Color(i / (float)width, j / (float)height, 0.1f, 1.0f)));
             }
         }
 
