@@ -15,7 +15,6 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.Input.Keys;
-import com.badlogic.gdx.InputAdapter;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
@@ -26,7 +25,6 @@ import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import static org.opencv.imgproc.Imgproc.blur;
 import static org.opencv.imgproc.Imgproc.cvtColor;
@@ -43,7 +41,6 @@ public class CVMain extends ApplicationAdapter {
     private ModelInstance[][] cubes;
 
 
-    private Mat videoInput;
     private Mat detectedEdges;
     private Environment environment;
     private Material mat;
@@ -100,8 +97,6 @@ public class CVMain extends ApplicationAdapter {
 
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         detectedEdges = Mat.eye(128, 128, CvType.CV_8UC1);
-        videoInput = Mat.eye(128, 128, CvType.CV_8UC1);
-
 
         eye = new MatOfPoint2f(); //.eye(128, 128, CvType.CV_8UC1);
         corners = new MatOfPoint2f();
@@ -154,7 +149,7 @@ public class CVMain extends ApplicationAdapter {
         handleChessboard();
         renderGraphics();
 
-        //doCanny();
+        doCanny();
 
 	}
 
@@ -346,8 +341,8 @@ public class CVMain extends ApplicationAdapter {
     }
 
     private void doCanny() {
-        cap.read(videoInput);
-        Imgproc.cvtColor(videoInput, detectedEdges, Imgproc.COLOR_RGB2GRAY);
+        cap.read(eye);
+        Imgproc.cvtColor(eye, detectedEdges, Imgproc.COLOR_RGB2GRAY);
         blur(detectedEdges, detectedEdges, new Size(3,3));
         Imgproc.Canny(detectedEdges, detectedEdges, 50,100);
         UtilAR.imShow(detectedEdges);
