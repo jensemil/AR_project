@@ -2,6 +2,7 @@ package dk.au.cs.desktop;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
+import dk.au.cs.CVChessboard;
 import dk.au.cs.CVMain;
 
 public class DesktopLauncher {
