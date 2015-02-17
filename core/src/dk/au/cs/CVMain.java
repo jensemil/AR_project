@@ -154,7 +154,7 @@ public class CVMain extends ApplicationAdapter {
         handleChessboard();
         renderGraphics();
 
-        //doCanny();
+        doCanny();
 
 	}
 
@@ -186,14 +186,8 @@ public class CVMain extends ApplicationAdapter {
             Mat rotation = new Mat();
             Mat translation = new Mat();
 
-            /*if (corners.size().height < numOfCoords) {
-                System.err.println("Not all of the chessboard is visible");
-                //We should not render anything then.
-                foundBoard = false;
-            } else {*/
             solvePnP(objectCoords, corners, intrinsics, distortion, rotation, translation, false, ITERATIVE);
             UtilAR.setCameraByRT(rotation, translation, cam);
-            //}
 
         }
     }
@@ -207,8 +201,8 @@ public class CVMain extends ApplicationAdapter {
                 intrinsics,
                 distortion,
                 new ArrayList<Mat>(),   //rvecs
-                new ArrayList<Mat>(),
-                Calib3d.CALIB_USE_INTRINSIC_GUESS   //tvecs
+                new ArrayList<Mat>(),   //tvecs
+                Calib3d.CALIB_USE_INTRINSIC_GUESS
 
         );
         calibrationImgs = new ArrayList<Mat>();
@@ -245,9 +239,7 @@ public class CVMain extends ApplicationAdapter {
                     cubes[i][j].transform.translate(position);
 
                     // 2) scale
-                    //Random random = new Random();
-                    //int randomness = random.nextInt(2) + 1;
-                    float yScale = (float)Math.sin((count + 5*j) / 30f * Math.PI) * (float)Math.cos((count + 5*i) / 30f * Math.PI) + 1.05f;
+                    float yScale = (float)Math.cos((count + 5*i) / 30f * Math.PI) * (float)Math.sin((count + 5*j) / 30f * Math.PI) + 1.05f;
                     cubes[i][j].transform.scale(1f, yScale, 1f);
 
                     // 1) translate before scale
@@ -355,19 +347,7 @@ public class CVMain extends ApplicationAdapter {
 
 
 
-    private void printMat(Mat mat) {
-        System.out.println("------------------------ Print matrix: -------");
-        for (int j = 0; j < mat.size().height; j++) {
 
-            String p0s = "";
-            double[] p0 = mat.get(j , 0);
-            for (int i = 0; i < p0.length; i++) {
-                p0s += p0[i] + ",";
-
-            }
-            System.out.println("Row " + j + ": " + p0s);
-        }
-    }
 }
 
 
