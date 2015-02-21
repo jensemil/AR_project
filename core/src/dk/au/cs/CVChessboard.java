@@ -1,27 +1,25 @@
 package dk.au.cs;
 
 //import apple.laf.JRSUIConstants;
+
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
-
+import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.Input.Keys;
-import com.sun.org.apache.xpath.internal.SourceTree;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
-import com.badlogic.gdx.graphics.VertexAttributes.Usage;
-
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
@@ -30,7 +28,7 @@ import java.util.List;
 import static org.opencv.calib3d.Calib3d.*;
 import static org.opencv.imgproc.Imgproc.*;
 
-public class CVMain extends ApplicationAdapter {
+public class CVChessboard extends ApplicationAdapter {
 
     // 3D graphics
     private PerspectiveCamera cam;
@@ -71,7 +69,6 @@ public class CVMain extends ApplicationAdapter {
 
     private double width = Math.floor(chessboardSize.width / 2);
     private double height = chessboardSize.height - 1;
-    private List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
 
     @Override
 	public void create () {
@@ -145,11 +142,9 @@ public class CVMain extends ApplicationAdapter {
         // read camera data into "eye matrix"
         cap.read(eye);
         // render eye texture
-        //UtilAR.imDrawBackground(eye);
-        //handleChessboard();
-        //renderGraphics();
-
-        findRectangle();
+        UtilAR.imDrawBackground(eye);
+        handleChessboard();
+        renderGraphics();
 
 	}
 
@@ -332,38 +327,10 @@ public class CVMain extends ApplicationAdapter {
 
     }
 
-    private void doCanny() {
-        Imgproc.cvtColor(eye, detectedEdges, Imgproc.COLOR_RGB2GRAY);
-        blur(detectedEdges, detectedEdges, new Size(3,3));
-        Imgproc.Canny(detectedEdges, detectedEdges, 50,100);
-        UtilAR.imShow(detectedEdges);
 
-    }
-      
-    private void findRectangle() {
-        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-        Mat hierachy = new Mat();
-        Imgproc.cvtColor(eye, detectedEdges, Imgproc.COLOR_RGB2GRAY);
-        threshold(detectedEdges, detectedEdges, 100, 255, THRESH_BINARY);
-        findContours(detectedEdges, contours, hierachy, RETR_LIST, CHAIN_APPROX_SIMPLE);
-        List<MatOfPoint> squares = new ArrayList<MatOfPoint>();
-        for(MatOfPoint cont : contours) {
-            MatOfPoint2f cont2f = new MatOfPoint2f(cont.toArray());
-            double cont_len = arcLength(cont2f, true);
-            MatOfPoint2f polygon = new MatOfPoint2f();
-            approxPolyDP(cont2f, polygon, 8, true);
 
-            //&& contourArea(cont2f) > 1000
-            System.out.println(polygon.dump());
-            if(polygon.size().height == 4) { //  && isContourConvex(cont1f)) {
-                System.out.println("Square added");
-                squares.add(new MatOfPoint(polygon.toArray()));
-            }
-        }
-        //if(squares.size() == 0) System.out.println("Squares is empty");
-        drawContours(eye, squares, -1, new Scalar(123));
-        UtilAR.imDrawBackground(eye);
-    }
+
+
 }
 
 
