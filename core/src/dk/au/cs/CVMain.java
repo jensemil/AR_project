@@ -343,6 +343,7 @@ public class CVMain extends ApplicationAdapter {
         blur(detectedEdges, detectedEdges, new Size(3,3));
         Imgproc.Canny(detectedEdges, detectedEdges, 50,100);
         UtilAR.imShow(detectedEdges);
+
     }
 
 
