@@ -171,6 +171,12 @@ public class CVChessboard extends ApplicationAdapter {
                 // set Y = 0, because we usually draw it with Y as the up-axis
                 objectCoords.put(j, 0, scale * col, 0.0, scale * row);
                 calibObjectCoords.put(j, 0, scale * col, scale * row, 0.0);
+
+                if (count % 100 == 0) {
+
+                    System.out.println("Corners: " + corners.dump());
+                    System.out.println("Obj coords: " + objectCoords.dump());
+                }
             }
 
             Mat rotation = new Mat();

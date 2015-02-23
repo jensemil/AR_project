@@ -64,14 +64,21 @@ public class CVMain extends ApplicationAdapter {
     private MatOfDouble distortion;
 
     private Size chessboardSize = new Size(9,6);
-    private double numOfCoords = chessboardSize.width*chessboardSize.height;
+    //private double numOfCoords = chessboardSize.width*chessboardSize.height;
+    private Size rectSize = new Size(2,2);
+    private double numOfCoords = rectSize.width*rectSize.height;
 
     private static int SCREEN_WIDTH = 640;
     private static int SCREEN_HEIGHT = 480;
 
     private double width = Math.floor(chessboardSize.width / 2);
     private double height = chessboardSize.height - 1;
-    private List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+    private List<MatOfPoint2f> rects = new ArrayList<MatOfPoint2f>();
+    private ModelInstance cubeInstance;
+
+    private MatOfPoint3f rectObj;
+
+    int count = 0;
 
     @Override
 	public void create () {
@@ -111,8 +118,17 @@ public class CVMain extends ApplicationAdapter {
         calibObjectCoords = new MatOfPoint3f();
         objectCoords.alloc((int)numOfCoords);
         calibObjectCoords.alloc((int)numOfCoords);
+        corners.alloc((int)numOfCoords);
         intrinsics = UtilAR.getDefaultIntrinsicMatrix(SCREEN_WIDTH, SCREEN_HEIGHT);
         distortion = UtilAR.getDefaultDistortionCoefficients();
+
+
+        rectObj = new MatOfPoint3f();
+        rectObj.alloc((int)numOfCoords);
+        rectObj.put(0,0, 0, 0, 0);
+        rectObj.put(1,0, 1, 0, 0);
+        rectObj.put(2,0, 1, 0, 1);
+        rectObj.put(3,0, 0, 0, 1);
 
         //Ensure Camera is ready!
         try {
@@ -147,11 +163,91 @@ public class CVMain extends ApplicationAdapter {
         // render eye texture
         //UtilAR.imDrawBackground(eye);
         //handleChessboard();
-        //renderGraphics();
 
-        findRectangle();
+
+        findRectangles();
+        handleRectangles();
+
 
 	}
+
+    private void findRectangles() {
+        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+        Mat hierachy = new Mat();
+        Imgproc.cvtColor(eye, detectedEdges, Imgproc.COLOR_RGB2GRAY);
+        threshold(detectedEdges, detectedEdges, 100, 255, THRESH_BINARY);
+        findContours(detectedEdges, contours, hierachy, RETR_LIST, CHAIN_APPROX_SIMPLE);
+        List<MatOfPoint> rectContours = new ArrayList<MatOfPoint>();
+        rects = new ArrayList<MatOfPoint2f>();
+        for(MatOfPoint cont : contours) {
+            MatOfPoint2f cont2f = new MatOfPoint2f(cont.toArray());
+            //double cont_len = arcLength(cont2f, true);
+            MatOfPoint2f polygon = new MatOfPoint2f();
+            approxPolyDP(cont2f, polygon, 8, true);
+
+            MatOfPoint polygonCvt = new MatOfPoint(polygon.toArray());
+
+            // check for squares
+            if(polygon.size().height == 4 && contourArea(polygonCvt) > 4000 && isContourConvex(polygonCvt)) {
+                rectContours.add(polygonCvt);
+                rects.add(polygon);
+            }
+        }
+        drawContours(eye, rectContours, -1, new Scalar(0, 0, 255));
+        UtilAR.imDrawBackground(eye);
+    }
+
+    private void handleRectangles() {
+
+        count++;
+
+
+
+        for (MatOfPoint2f rect : rects) {
+
+            Mat rotation = new Mat();
+            Mat translation = new Mat();
+
+            solvePnP(rectObj, rect, intrinsics, distortion, rotation, translation, false, ITERATIVE);
+
+            if (count % 100 == 0) {
+                System.out.println("Coords:");
+                System.out.println("obj: " + rectObj.dump());
+                System.out.println("img: " + rect.dump());
+                System.out.println();
+                System.out.println("--------------------");
+                System.out.println("RT:");
+                System.out.println("R: " + rotation.dump());
+                System.out.println("T: " + translation.dump());
+                System.out.println("--------------------");
+            }
+
+            UtilAR.setCameraByRT(rotation, translation, cam);
+            renderGraphics();
+        }
+
+        if (count % 100 == 0)
+            System.out.println("#rects found: " + rects.size());
+
+
+    }
+
+
+
+    private void renderGraphics() {
+        // render model objects
+        modelBatch.begin(cam);
+
+
+
+        Vector3 position = new Vector3(0, 0, 0);
+        cubeInstance.transform.translate(position);
+
+        modelBatch.render(cubeInstance, environment);
+        modelBatch.end();
+
+    }
+
 
     @Override
     public void resize (int width, int height) {
@@ -160,93 +256,7 @@ public class CVMain extends ApplicationAdapter {
         cam.update();
     }
 
-    private void handleChessboard() {
-        // find chessboard in the rendered image bool is set to render images.
-        foundBoard = findChessboardCorners(eye, chessboardSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
 
-        if (foundBoard) {
-
-            double scale = 1.0; // the unit of the chessboard
-
-
-            for (int j = 0; j < corners.size().height; j++) {
-                double row = Math.floor(j / chessboardSize.width);
-                double col = j % chessboardSize.width;
-
-                // set Y = 0, because we usually draw it with Y as the up-axis
-                objectCoords.put(j, 0, scale * col, 0.0, scale * row);
-                calibObjectCoords.put(j, 0, scale * col, scale * row, 0.0);
-            }
-
-            Mat rotation = new Mat();
-            Mat translation = new Mat();
-
-            solvePnP(objectCoords, corners, intrinsics, distortion, rotation, translation, false, ITERATIVE);
-            UtilAR.setCameraByRT(rotation, translation, cam);
-
-        }
-    }
-
-    private void doCalibration() {
-        System.out.println("doCalibration");
-        Calib3d.calibrateCamera(
-                calibrationObjectPoints,
-                calibrationImgs,
-                new Size(SCREEN_WIDTH, SCREEN_HEIGHT),
-                intrinsics,
-                distortion,
-                new ArrayList<Mat>(),   //rvecs
-                new ArrayList<Mat>(),   //tvecs
-                Calib3d.CALIB_USE_INTRINSIC_GUESS
-
-        );
-        calibrationImgs = new ArrayList<Mat>();
-        calibrationObjectPoints = new ArrayList<Mat>();
-    }
-
-    private void takeSnap() {
-        System.out.println("takeSnap");
-        MatOfPoint2f calibPoints = new MatOfPoint2f();
-        boolean success = findChessboardCorners(eye, chessboardSize, calibPoints, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
-        if (success) {
-            calibrationImgs.add(calibPoints);
-            calibrationObjectPoints.add(calibObjectCoords);
-        }
-    }
-
-    int count = 0;
-
-    private void renderGraphics() {
-        // render model objects
-        if(foundBoard) {
-            modelBatch.begin(cam);
-
-            count++;
-
-            for (int i = 0; i < width; i++) {
-                for (int j = 0; j < height; j++) {
-                    cubes[i][j].transform.idt();
-                    int xOffset = 2 * i;
-                    if (j % 2 == 1) xOffset += 1;
-
-                    // 3) translating to unique cube position
-                    Vector3 position = new Vector3(originPosition.x + xOffset, 0, originPosition.z + j);
-                    cubes[i][j].transform.translate(position);
-
-                    // 2) scale
-                    float yScale = (float)Math.cos((count + 5 * i) / 30f * Math.PI) * (float)Math.sin((count + 5 * j) / 30f * Math.PI) + 1.05f;
-                    cubes[i][j].transform.scale(1f, yScale, 1f);
-
-                    // 1) translate before scale
-                    cubes[i][j].transform.translate(0f, 0.5f, 0f);
-
-                    modelBatch.render(cubes[i][j], environment);
-                }
-            }
-
-            modelBatch.end();
-        }
-    }
 
     @Override
     public void dispose() {
@@ -322,12 +332,9 @@ public class CVMain extends ApplicationAdapter {
         cube = modelBuilder.createBox(1f, 1f, 1f, mat, Usage.Position
                 | Usage.Normal | Usage.TextureCoordinates);
 
-        for (int i = 0; i < width; i++) {
-            for (int j = 0; j < height; j++) {
-                cubes[i][j] = new ModelInstance(cube);
-                cubes[i][j].materials.get(0).set(ColorAttribute.createDiffuse(new Color(i / (float)width, j / (float)height, 0.1f, 1.0f)));
-            }
-        }
+
+        cubeInstance = new ModelInstance(cube);
+        cubeInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(5 / (float)width, 4 / (float)height, 0.1f, 1.0f)));
 
 
     }
@@ -340,30 +347,123 @@ public class CVMain extends ApplicationAdapter {
 
     }
       
-    private void findRectangle() {
-        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-        Mat hierachy = new Mat();
-        Imgproc.cvtColor(eye, detectedEdges, Imgproc.COLOR_RGB2GRAY);
-        threshold(detectedEdges, detectedEdges, 100, 255, THRESH_BINARY);
-        findContours(detectedEdges, contours, hierachy, RETR_LIST, CHAIN_APPROX_SIMPLE);
-        List<MatOfPoint> squares = new ArrayList<MatOfPoint>();
-        for(MatOfPoint cont : contours) {
-            MatOfPoint2f cont2f = new MatOfPoint2f(cont.toArray());
-            double cont_len = arcLength(cont2f, true);
-            MatOfPoint2f polygon = new MatOfPoint2f();
-            approxPolyDP(cont2f, polygon, 8, true);
 
-            //&& contourArea(cont2f) > 1000
-            System.out.println(polygon.dump());
-            if(polygon.size().height == 4) { //  && isContourConvex(cont1f)) {
-                System.out.println("Square added");
-                squares.add(new MatOfPoint(polygon.toArray()));
+
+
+
+    /** CHESSBOARD **/
+
+
+    private void setupCubes() {
+
+        // setup material with texture
+        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
+                0.3f, 1.0f)));
+        // blending
+        mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
+                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
+
+        cube = modelBuilder.createBox(1f, 1f, 1f, mat, Usage.Position
+                | Usage.Normal | Usage.TextureCoordinates);
+
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
+                cubes[i][j] = new ModelInstance(cube);
+                cubes[i][j].materials.get(0).set(ColorAttribute.createDiffuse(new Color(i / (float)width, j / (float)height, 0.1f, 1.0f)));
             }
         }
-        //if(squares.size() == 0) System.out.println("Squares is empty");
-        drawContours(eye, squares, -1, new Scalar(123));
-        UtilAR.imDrawBackground(eye);
+
+
     }
+
+    private void handleChessboard() {
+        // find chessboard in the rendered image bool is set to render images.
+        foundBoard = findChessboardCorners(eye, chessboardSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
+
+        if (foundBoard) {
+
+            double scale = 1.0; // the unit of the chessboard
+
+
+            for (int j = 0; j < corners.size().height; j++) {
+                double row = Math.floor(j / chessboardSize.width);
+                double col = j % chessboardSize.width;
+
+                // set Y = 0, because we usually draw it with Y as the up-axis
+                objectCoords.put(j, 0, scale * col, 0.0, scale * row);
+                calibObjectCoords.put(j, 0, scale * col, scale * row, 0.0);
+            }
+
+            Mat rotation = new Mat();
+            Mat translation = new Mat();
+
+            solvePnP(objectCoords, corners, intrinsics, distortion, rotation, translation, false, ITERATIVE);
+            UtilAR.setCameraByRT(rotation, translation, cam);
+
+        }
+    }
+
+    private void doCalibration() {
+        System.out.println("doCalibration");
+        Calib3d.calibrateCamera(
+                calibrationObjectPoints,
+                calibrationImgs,
+                new Size(SCREEN_WIDTH, SCREEN_HEIGHT),
+                intrinsics,
+                distortion,
+                new ArrayList<Mat>(),   //rvecs
+                new ArrayList<Mat>(),   //tvecs
+                Calib3d.CALIB_USE_INTRINSIC_GUESS
+
+        );
+        calibrationImgs = new ArrayList<Mat>();
+        calibrationObjectPoints = new ArrayList<Mat>();
+    }
+
+    private void takeSnap() {
+        System.out.println("takeSnap");
+        MatOfPoint2f calibPoints = new MatOfPoint2f();
+        boolean success = findChessboardCorners(eye, chessboardSize, calibPoints, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
+        if (success) {
+            calibrationImgs.add(calibPoints);
+            calibrationObjectPoints.add(calibObjectCoords);
+        }
+    }
+
+
+
+    private void renderChessboardGraphics() {
+        // render model objects
+        if(foundBoard) {
+            modelBatch.begin(cam);
+
+            count++;
+
+            for (int i = 0; i < width; i++) {
+                for (int j = 0; j < height; j++) {
+                    cubes[i][j].transform.idt();
+                    int xOffset = 2 * i;
+                    if (j % 2 == 1) xOffset += 1;
+
+                    // 3) translating to unique cube position
+                    Vector3 position = new Vector3(originPosition.x + xOffset, 0, originPosition.z + j);
+                    cubes[i][j].transform.translate(position);
+
+                    // 2) scale
+                    float yScale = (float)Math.cos((count + 5 * i) / 30f * Math.PI) * (float)Math.sin((count + 5 * j) / 30f * Math.PI) + 1.05f;
+                    cubes[i][j].transform.scale(1f, yScale, 1f);
+
+                    // 1) translate before scale
+                    cubes[i][j].transform.translate(0f, 0.5f, 0f);
+
+                    modelBatch.render(cubes[i][j], environment);
+                }
+            }
+
+            modelBatch.end();
+        }
+    }
+
+
+
 }
-
-
