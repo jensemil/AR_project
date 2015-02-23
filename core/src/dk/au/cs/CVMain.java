@@ -216,10 +216,10 @@ public class CVMain extends ApplicationAdapter {
                 System.out.println("img: " + rect.dump());
                 System.out.println();
                 System.out.println("--------------------");
-                System.out.println("RT:");
-                System.out.println("R: " + rotation.dump());
-                System.out.println("T: " + translation.dump());
-                System.out.println("--------------------");
+                //System.out.println("RT:");
+                //System.out.println("R: " + rotation.dump());
+                //System.out.println("T: " + translation.dump());
+                //System.out.println("--------------------");
             }
 
             UtilAR.setCameraByRT(rotation, translation, cam);
