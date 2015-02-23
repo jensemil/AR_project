@@ -209,11 +209,11 @@ public class CVMain extends ApplicationAdapter {
             solvePnP(rectObj, rect, intrinsics, distortion, rotation, translation, false, ITERATIVE);
 
             if (count % 100 == 0) {
-                System.out.println("Coords:");
-                System.out.println("obj: " + rectObj.dump());
-                System.out.println("img: " + rect.dump());
-                System.out.println();
-                System.out.println("--------------------");
+                //System.out.println("Coords:");
+                //System.out.println("obj: " + rectObj.dump());
+                //System.out.println("img: " + rect.dump());
+                //System.out.println();
+                //System.out.println("--------------------");
                 //System.out.println("RT:");
                 //System.out.println("R: " + rotation.dump());
                 //System.out.println("T: " + translation.dump());
