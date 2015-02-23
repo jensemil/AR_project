@@ -187,8 +187,8 @@ public class CVMain extends ApplicationAdapter {
 
             MatOfPoint polygonCvt = new MatOfPoint(polygon.toArray());
 
-            // check for squares
-            if(polygon.size().height == 4 && contourArea(polygonCvt) > 4000 && isContourConvex(polygonCvt)) {
+            // check for rectangles
+            if(polygon.size().height == 4 && contourArea(polygonCvt) > 4000 && isContourConvex(polygonCvt) && isClockwise(polygon)) {
                 rectContours.add(polygonCvt);
                 rects.add(polygon);
             }
@@ -202,12 +202,10 @@ public class CVMain extends ApplicationAdapter {
         count++;
 
 
-
         for (MatOfPoint2f rect : rects) {
-
+            
             Mat rotation = new Mat();
             Mat translation = new Mat();
-
             solvePnP(rectObj, rect, intrinsics, distortion, rotation, translation, false, ITERATIVE);
 
             if (count % 100 == 0) {
@@ -224,12 +222,29 @@ public class CVMain extends ApplicationAdapter {
 
             UtilAR.setCameraByRT(rotation, translation, cam);
             renderGraphics();
+
         }
+
 
         if (count % 100 == 0)
             System.out.println("#rects found: " + rects.size());
 
 
+    }
+
+    private boolean isClockwise(MatOfPoint2f rect) {
+        double[] p1 = rect.get(0, 0);
+        double[] p2 = rect.get(1, 0);
+        double[] p3 = rect.get(2, 0);
+
+        Vector3 v1 = new Vector3((float)(p1[0]-p2[0]), 0.0f, (float)(p1[1]-p2[1]));
+        Vector3 v2 = new Vector3((float)(p3[0]-p2[0]), 0.0f, (float)(p3[1]-p2[1]));
+
+        Vector3 crs = v1.crs(v2);
+
+        System.out.println("Crs.y: " + crs.x + ", " + crs.y + ", " + crs.z + "(" + crs + ")");
+
+        return (crs.y > 0);
     }
 
 
@@ -239,9 +254,9 @@ public class CVMain extends ApplicationAdapter {
         modelBatch.begin(cam);
 
 
-
-        Vector3 position = new Vector3(0, 0, 0);
-        cubeInstance.transform.translate(position);
+        cubeInstance.transform.idt();
+        //Vector3 position = new Vector3(0, 0.5f, 0);
+        cubeInstance.transform.translate(originPosition);
 
         modelBatch.render(cubeInstance, environment);
         modelBatch.end();
