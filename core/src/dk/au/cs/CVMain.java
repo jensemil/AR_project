@@ -15,6 +15,7 @@ import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
+import com.badlogic.gdx.graphics.g3d.utils.AnimationController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
@@ -38,6 +39,7 @@ public class CVMain extends ApplicationAdapter {
     private ModelBuilder modelBuilder;
     private ModelBatch modelBatch;
     private ModelInstance modelInstance;
+    private AnimationController controller;
 
 
 
@@ -176,6 +178,7 @@ public class CVMain extends ApplicationAdapter {
         Model model;
         // Now load the model by name
         // Note, the model (g3db file ) and textures need to be added to the assets folder of the Android proj
+
         //model = modelLoader.loadModel(Gdx.files.getFileHandle("first.g3db", Files.FileType.Internal));
 
         // setup material with texture
@@ -185,9 +188,10 @@ public class CVMain extends ApplicationAdapter {
         mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
                 GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
 
-        model = modelBuilder.createBox(1f, 1f, 1f, mat, VertexAttributes.Usage.Position
-                | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);
+        /*model = modelBuilder.createBox(1f, 1f, 1f, mat, VertexAttributes.Usage.Position
+                | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);     */
 
+        model = modelLoader.loadModel(Gdx.files.getFileHandle("glassSquare.g3db", Files.FileType.Internal));
         // Now create an instance.  Instance holds the positioning data, etc of an instance of your model
         modelInstance = new ModelInstance(model);
 
@@ -200,6 +204,26 @@ public class CVMain extends ApplicationAdapter {
                 GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
 
         modelInstance.materials.add(mat);
+
+        controller = new AnimationController(modelInstance);
+        System.out.println(modelInstance.animations.first().id);
+        controller.setAnimation("Cube|RotateAnim",1, new AnimationController.AnimationListener(){
+
+            @Override
+            public void onEnd(AnimationController.AnimationDesc animation) {
+                // this will be called when the current animation is done.
+                // queue up another animation called "balloon".
+                // Passing a negative to loop count loops forever.  1f for speed is normal speed.
+                controller.queue("Cube|RotateAnim",-1,1f,null,0f);
+            }
+
+            @Override
+            public void onLoop(AnimationController.AnimationDesc animation) {
+                // TODO Auto-generated method stub
+
+            }
+
+        });
 
     }
 
@@ -222,7 +246,7 @@ public class CVMain extends ApplicationAdapter {
 
         findRectangles();
         handleRectangles();
-	}
+    }
 
     private void drawHomography(MatOfPoint2f src) {
         Mat homography = findHomography(src, homoWorld);
@@ -403,8 +427,7 @@ public class CVMain extends ApplicationAdapter {
     private void renderGraphics(int theId) {
         // render model objects
         modelBatch.begin(cam);
-
-
+        controller.update(Gdx.graphics.getDeltaTime());
         modelInstance.transform.idt();
         //Vector3 position = new Vector3(0, 0.5f, 0);
         modelInstance.transform.translate(originPosition);
