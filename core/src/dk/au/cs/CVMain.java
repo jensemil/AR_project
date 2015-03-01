@@ -2,6 +2,7 @@ package dk.au.cs;
 
 //import apple.laf.JRSUIConstants;
 import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
@@ -12,9 +13,11 @@ import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.Input.Keys;
+import com.badlogic.gdx.utils.UBJsonReader;
 import com.sun.org.apache.xpath.internal.SourceTree;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.*;
@@ -34,10 +37,9 @@ public class CVMain extends ApplicationAdapter {
 
     // 3D graphics
     private PerspectiveCamera cam;
-    private Model cube;
     private ModelBuilder modelBuilder;
     private ModelBatch modelBatch;
-    private ModelInstance[][] cubes;
+    private ModelInstance modelInstance;
 
 
 
@@ -64,7 +66,6 @@ public class CVMain extends ApplicationAdapter {
     private Mat intrinsics;
     private MatOfDouble distortion;
 
-    private Size chessboardSize = new Size(9,6);
     //private double numOfCoords = chessboardSize.width*chessboardSize.height;
     private Size rectSize = new Size(2,2);
     private double numOfCoords = rectSize.width*rectSize.height;
@@ -72,10 +73,8 @@ public class CVMain extends ApplicationAdapter {
     private static int SCREEN_WIDTH = 640;
     private static int SCREEN_HEIGHT = 480;
 
-    private double width = Math.floor(chessboardSize.width / 2);
-    private double height = chessboardSize.height - 1;
+
     private List<MatOfPoint2f> rects = new ArrayList<MatOfPoint2f>();
-    private ModelInstance cubeInstance;
 
     private MatOfPoint3f rectObj;
 
@@ -92,10 +91,10 @@ public class CVMain extends ApplicationAdapter {
         modelBatch = new ModelBatch();
         // setup model and build cube
         modelBuilder = new ModelBuilder();
-        cubes = new ModelInstance[(int)Math.floor(chessboardSize.width / 2)][(int)chessboardSize.height - 1];
+        createModel();
         setupCamera();
         setupEnvironment();
-        setupCube();
+
 
 
         // OpenCV
@@ -147,7 +146,31 @@ public class CVMain extends ApplicationAdapter {
 
     }
 
-	@Override
+    private void createModel() {
+        // Model loader needs a binary json reader to decode
+        UBJsonReader jsonReader = new UBJsonReader();
+        // Create a model loader passing in our json reader
+        G3dModelLoader modelLoader = new G3dModelLoader(jsonReader);
+        Model model;
+        // Now load the model by name
+        // Note, the model (g3db file ) and textures need to be added to the assets folder of the Android proj
+        model = modelLoader.loadModel(Gdx.files.getFileHandle("first.g3db", Files.FileType.Internal));
+        // Now create an instance.  Instance holds the positioning data, etc of an instance of your model
+        modelInstance = new ModelInstance(model);
+
+
+        // setup material with texture
+        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
+                0.3f, 1.0f)));
+        // blending
+        mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
+                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
+
+        modelInstance.materials.add(mat);
+
+    }
+
+    @Override
 	public void render () {
         Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(),
                 Gdx.graphics.getHeight());
@@ -299,11 +322,11 @@ public class CVMain extends ApplicationAdapter {
         modelBatch.begin(cam);
 
 
-        cubeInstance.transform.idt();
+        modelInstance.transform.idt();
         //Vector3 position = new Vector3(0, 0.5f, 0);
-        cubeInstance.transform.translate(originPosition);
+        modelInstance.transform.translate(originPosition);
 
-        modelBatch.render(cubeInstance, environment);
+        modelBatch.render(modelInstance, environment);
         modelBatch.end();
 
     }
@@ -362,24 +385,7 @@ public class CVMain extends ApplicationAdapter {
         cam.update();
     }
 
-    private void setupCube() {
 
-        // setup material with texture
-        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
-                0.3f, 1.0f)));
-        // blending
-        mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
-                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
-
-        cube = modelBuilder.createBox(1f, 1f, 1f, mat, Usage.Position
-                | Usage.Normal | Usage.TextureCoordinates);
-
-
-        cubeInstance = new ModelInstance(cube);
-        cubeInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(5 / (float)width, 4 / (float)height, 0.1f, 1.0f)));
-
-
-    }
 
     //JUST THE BODY NO USE ATM
     private void setupEventHandling() {
