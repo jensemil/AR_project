@@ -223,6 +223,8 @@ public class CVMain extends ApplicationAdapter {
             UtilAR.setCameraByRT(rotation, translation, cam);
             renderGraphics();
 
+            rotation.mul(rotation);
+
         }
 
 
