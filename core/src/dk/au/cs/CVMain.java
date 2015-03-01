@@ -231,6 +231,10 @@ public class CVMain extends ApplicationAdapter {
         UtilAR.imDrawBackground(eye);
     }
 
+    private void findId() {
+
+    }
+
     private void handleRectangles() {
 
         count++;
