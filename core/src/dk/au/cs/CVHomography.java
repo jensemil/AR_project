@@ -1,31 +1,23 @@
 package dk.au.cs;
 
 //import apple.laf.JRSUIConstants;
+
 import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
-
+import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
-import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
-import com.badlogic.gdx.graphics.g3d.utils.AnimationController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.Input.Keys;
-import com.badlogic.gdx.utils.UBJsonReader;
-import com.sun.org.apache.xpath.internal.SourceTree;
-import org.opencv.calib3d.Calib3d;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
-import com.badlogic.gdx.graphics.VertexAttributes.Usage;
-
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
@@ -34,18 +26,18 @@ import java.util.List;
 import static org.opencv.calib3d.Calib3d.*;
 import static org.opencv.imgproc.Imgproc.*;
 
-public class CVMain extends ApplicationAdapter {
+public class CVHomography extends ApplicationAdapter {
 
     // 3D graphics
     private PerspectiveCamera cam;
+    private Model cube;
     private ModelBuilder modelBuilder;
     private ModelBatch modelBatch;
-    private ModelInstance modelInstance;
-    private AnimationController controller;
+    private ModelInstance[][] cubes;
 
 
-
-    private MatOfPoint2f warpedImage;
+    private Mat detectedEdges;
+    private Mat warpedImage;
     private Environment environment;
     private Material mat;
     private Vector3 originPosition;
@@ -68,6 +60,7 @@ public class CVMain extends ApplicationAdapter {
     private Mat intrinsics;
     private MatOfDouble distortion;
 
+    private Size chessboardSize = new Size(9,6);
     //private double numOfCoords = chessboardSize.width*chessboardSize.height;
     private Size rectSize = new Size(2,2);
     private double numOfCoords = rectSize.width*rectSize.height;
@@ -75,8 +68,10 @@ public class CVMain extends ApplicationAdapter {
     private static int SCREEN_WIDTH = 640;
     private static int SCREEN_HEIGHT = 480;
 
-
+    private double width = Math.floor(chessboardSize.width / 2);
+    private double height = chessboardSize.height - 1;
     private List<MatOfPoint2f> rects = new ArrayList<MatOfPoint2f>();
+    private ModelInstance cubeInstance;
 
     private MatOfPoint3f rectObj;
 
@@ -93,17 +88,17 @@ public class CVMain extends ApplicationAdapter {
         modelBatch = new ModelBatch();
         // setup model and build cube
         modelBuilder = new ModelBuilder();
-        createModel();
+        cubes = new ModelInstance[(int)Math.floor(chessboardSize.width / 2)][(int)chessboardSize.height - 1];
         setupCamera();
         setupEnvironment();
-
+        setupCube();
 
 
         // OpenCV
 
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-
-        warpedImage = new MatOfPoint2f(); // Mat.eye(SCREEN_WIDTH, SCREEN_WIDTH, CvType.CV_8UC1);
+        detectedEdges = Mat.eye(128, 128, CvType.CV_8UC1);
+        warpedImage = Mat.eye(SCREEN_WIDTH, SCREEN_WIDTH, CvType.CV_8UC1);
 
         eye = new MatOfPoint2f(); //.eye(128, 128, CvType.CV_8UC1);
         corners = new MatOfPoint2f();
@@ -148,51 +143,7 @@ public class CVMain extends ApplicationAdapter {
 
     }
 
-    private void createModel() {
-        // Model loader needs a binary json reader to decode
-        UBJsonReader jsonReader = new UBJsonReader();
-        // Create a model loader passing in our json reader
-        G3dModelLoader modelLoader = new G3dModelLoader(jsonReader);
-        Model model;
-        // Now load the model by name
-        // Note, the model (g3db file ) and textures need to be added to the assets folder of the Android proj
-        model = modelLoader.loadModel(Gdx.files.getFileHandle("glassSquare.g3db", Files.FileType.Internal));
-        // Now create an instance.  Instance holds the positioning data, etc of an instance of your model
-        modelInstance = new ModelInstance(model);
-
-
-        // setup material with texture
-        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
-                0.3f, 1.0f)));
-        // blending
-        mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
-                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
-
-        modelInstance.materials.add(mat);
-
-        controller = new AnimationController(modelInstance);
-        System.out.println(modelInstance.animations.first().id);
-        controller.setAnimation("Cube|RotateAnim",1, new AnimationController.AnimationListener(){
-
-            @Override
-            public void onEnd(AnimationController.AnimationDesc animation) {
-                // this will be called when the current animation is done.
-                // queue up another animation called "balloon".
-                // Passing a negative to loop count loops forever.  1f for speed is normal speed.
-                controller.queue("Cube|RotateAnim",-1,1f,null,0f);
-            }
-
-            @Override
-            public void onLoop(AnimationController.AnimationDesc animation) {
-                // TODO Auto-generated method stub
-
-            }
-
-        });
-
-    }
-
-    @Override
+	@Override
 	public void render () {
         Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(),
                 Gdx.graphics.getHeight());
@@ -211,9 +162,10 @@ public class CVMain extends ApplicationAdapter {
 
         findRectangles();
         handleRectangles();
-    }
+	}
 
     private void drawHomography(MatOfPoint2f src) {
+
         MatOfPoint2f output = new MatOfPoint2f();
         output.alloc(4);
         output.put(0, 0, 0, 0);
@@ -222,21 +174,16 @@ public class CVMain extends ApplicationAdapter {
         output.put(3,0,0,SCREEN_WIDTH);
         Mat homography = findHomography(src, output);
         warpPerspective(eye,warpedImage,homography,new Size(SCREEN_WIDTH, SCREEN_WIDTH));
+        UtilAR.imShow(warpedImage);
 
-    }
-
-    private List<MatOfPoint> findContoursFromEdges(MatOfPoint2f input) {
-        Mat detectedEdges = Mat.eye(128, 128, CvType.CV_8UC1);
-        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-        Mat hierachy = new Mat();
-        Imgproc.cvtColor(input, detectedEdges, Imgproc.COLOR_RGB2GRAY);
-        threshold(detectedEdges, detectedEdges, 100, 255, THRESH_BINARY);
-        findContours(detectedEdges, contours, hierachy, RETR_LIST, CHAIN_APPROX_SIMPLE);
-        return contours;
     }
 
     private void findRectangles() {
-        List<MatOfPoint> contours = findContoursFromEdges(eye);
+        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+        Mat hierachy = new Mat();
+        Imgproc.cvtColor(eye, detectedEdges, Imgproc.COLOR_RGB2GRAY);
+        threshold(detectedEdges, detectedEdges, 100, 255, THRESH_BINARY);
+        findContours(detectedEdges, contours, hierachy, RETR_LIST, CHAIN_APPROX_SIMPLE);
         List<MatOfPoint> rectContours = new ArrayList<MatOfPoint>();
         rects = new ArrayList<MatOfPoint2f>();
         for(MatOfPoint cont : contours) {
@@ -255,40 +202,6 @@ public class CVMain extends ApplicationAdapter {
         }
         drawContours(eye, rectContours, -1, new Scalar(0, 0, 255));
         UtilAR.imDrawBackground(eye);
-    }
-
-    private int findId() {
-        List<MatOfPoint> contours = findContoursFromEdges(warpedImage);
-        List<MatOfPoint> rectContours = new ArrayList<MatOfPoint>();
-        for(MatOfPoint cont : contours) {
-            MatOfPoint2f cont2f = new MatOfPoint2f(cont.toArray());
-            //double cont_len = arcLength(cont2f, true);
-            MatOfPoint2f polygon = new MatOfPoint2f();
-            approxPolyDP(cont2f, polygon, 8, true);
-
-            MatOfPoint polygonCvt = new MatOfPoint(polygon.toArray());
-
-            // check for rectangles
-            //if(polygon.size().height == 4 && contourArea(polygonCvt) > 4000 && isContourConvex(polygonCvt) && isClockwise(polygon)) {
-
-            if (!isContourConvex(polygonCvt) && polygon.size().height >= 6) {
-                System.out.println(polygon.size().height);
-                rectContours.add(polygonCvt);
-            }
-            //}
-        }
-        drawContours(warpedImage, rectContours, -1, new Scalar(255, 0, 0));
-        UtilAR.imShow(warpedImage);
-
-        if (rectContours.size() == 1) {
-            MatOfPoint cont = rectContours.get(0);
-            double id = cont.size().height;
-            id = (id - 6) / 4.0;       // this works!
-            return (int)id;
-        }
-        else {
-            return -1;
-        }
     }
 
     private void handleRectangles() {
@@ -317,7 +230,6 @@ public class CVMain extends ApplicationAdapter {
             UtilAR.setCameraByRT(rotation, translation, cam);
             renderGraphics();
             drawHomography(rect);
-            System.out.println("ID: " + findId());
         }
 
 
@@ -342,12 +254,13 @@ public class CVMain extends ApplicationAdapter {
     private void renderGraphics() {
         // render model objects
         modelBatch.begin(cam);
-        controller.update(Gdx.graphics.getDeltaTime());
-        modelInstance.transform.idt();
-        //Vector3 position = new Vector3(0, 0.5f, 0);
-        modelInstance.transform.translate(originPosition);
 
-        modelBatch.render(modelInstance, environment);
+
+        cubeInstance.transform.idt();
+        //Vector3 position = new Vector3(0, 0.5f, 0);
+        cubeInstance.transform.translate(originPosition);
+
+        modelBatch.render(cubeInstance, environment);
         modelBatch.end();
 
     }
@@ -406,7 +319,31 @@ public class CVMain extends ApplicationAdapter {
         cam.update();
     }
 
+    private void setupCube() {
 
+        // setup material with texture
+        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
+                0.3f, 1.0f)));
+        // blending
+        mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
+                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
+
+        cube = modelBuilder.createBox(1f, 1f, 1f, mat, Usage.Position
+                | Usage.Normal | Usage.TextureCoordinates);
+
+
+        cubeInstance = new ModelInstance(cube);
+        cubeInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(5 / (float)width, 4 / (float)height, 0.1f, 1.0f)));
+
+
+    }
+
+    private void doCanny() {
+        Imgproc.cvtColor(eye, detectedEdges, Imgproc.COLOR_RGB2GRAY);
+        blur(detectedEdges, detectedEdges, new Size(3,3));
+        Imgproc.Canny(detectedEdges, detectedEdges, 50,100);
+        UtilAR.imShow(detectedEdges);
+    }
 
     //JUST THE BODY NO USE ATM
     private void setupEventHandling() {
