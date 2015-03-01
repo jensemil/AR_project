@@ -9,21 +9,19 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 
+import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.utils.UBJsonReader;
-import com.sun.org.apache.xpath.internal.SourceTree;
-import org.opencv.calib3d.Calib3d;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
-import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 
 import org.opencv.imgproc.Imgproc;
 
@@ -76,9 +74,11 @@ public class CVMain extends ApplicationAdapter {
 
     private List<MatOfPoint2f> rects = new ArrayList<MatOfPoint2f>();
 
-    private MatOfPoint3f rectObj;
+    private List<MatOfPoint3f> rectObjs;
 
     int count = 0;
+    private MatOfPoint2f homoWorld;
+
 
     @Override
 	public void create () {
@@ -86,6 +86,7 @@ public class CVMain extends ApplicationAdapter {
         // Graphics
 
         originPosition = new Vector3(0.5f, 0.5f, 0.5f);
+        //originPosition = new Vector3(0,0,0);
 
         // init model batch - used for rendering
         modelBatch = new ModelBatch();
@@ -100,6 +101,13 @@ public class CVMain extends ApplicationAdapter {
         // OpenCV
 
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+
+        homoWorld = new MatOfPoint2f();
+        homoWorld.alloc(4);
+        homoWorld.put(0, 0, 0, 0);
+        homoWorld.put(1, 0, SCREEN_WIDTH, 0);
+        homoWorld.put(2, 0, SCREEN_WIDTH, SCREEN_WIDTH);
+        homoWorld.put(3, 0, 0, SCREEN_WIDTH);
 
         warpedImage = new MatOfPoint2f(); // Mat.eye(SCREEN_WIDTH, SCREEN_WIDTH, CvType.CV_8UC1);
 
@@ -120,13 +128,11 @@ public class CVMain extends ApplicationAdapter {
         intrinsics = UtilAR.getDefaultIntrinsicMatrix(SCREEN_WIDTH, SCREEN_HEIGHT);
         distortion = UtilAR.getDefaultDistortionCoefficients();
 
+        setupRectObjs();
+        for (MatOfPoint3f rect : rectObjs) {
+            System.out.println(rect.dump());
+        }
 
-        rectObj = new MatOfPoint3f();
-        rectObj.alloc((int)numOfCoords);
-        rectObj.put(0,0, 0, 0, 0);
-        rectObj.put(1,0, 1, 0, 0);
-        rectObj.put(2,0, 1, 0, 1);
-        rectObj.put(3,0, 0, 0, 1);
 
         //Ensure Camera is ready!
         try {
@@ -146,6 +152,22 @@ public class CVMain extends ApplicationAdapter {
 
     }
 
+    private void setupRectObjs() {
+
+        rectObjs = new ArrayList<MatOfPoint3f>();
+
+        for (int i = 0; i < 4; i++) {
+            MatOfPoint3f rectObj = new MatOfPoint3f();
+            rectObj.alloc((int)numOfCoords);
+            rectObj.put(i % 4,0, 0, 0, 0);
+            rectObj.put((i+1) % 4,0, 1, 0, 0);
+            rectObj.put((i+2) % 4,0, 1, 0, 1);
+            rectObj.put((i+3) % 4,0, 0, 0, 1);
+            rectObjs.add(rectObj);
+        }
+    }
+
+
     private void createModel() {
         // Model loader needs a binary json reader to decode
         UBJsonReader jsonReader = new UBJsonReader();
@@ -154,7 +176,18 @@ public class CVMain extends ApplicationAdapter {
         Model model;
         // Now load the model by name
         // Note, the model (g3db file ) and textures need to be added to the assets folder of the Android proj
-        model = modelLoader.loadModel(Gdx.files.getFileHandle("first.g3db", Files.FileType.Internal));
+        //model = modelLoader.loadModel(Gdx.files.getFileHandle("first.g3db", Files.FileType.Internal));
+
+        // setup material with texture
+        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
+                0.3f, 1.0f)));
+        // blending
+        mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
+                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
+
+        model = modelBuilder.createBox(1f, 1f, 1f, mat, VertexAttributes.Usage.Position
+                | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);
+
         // Now create an instance.  Instance holds the positioning data, etc of an instance of your model
         modelInstance = new ModelInstance(model);
 
@@ -171,7 +204,7 @@ public class CVMain extends ApplicationAdapter {
     }
 
     @Override
-	public void render () {
+	public void render() {
         Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(),
                 Gdx.graphics.getHeight());
 		Gdx.gl.glClearColor(1, 1, 1, 1);
@@ -192,15 +225,8 @@ public class CVMain extends ApplicationAdapter {
 	}
 
     private void drawHomography(MatOfPoint2f src) {
-        MatOfPoint2f output = new MatOfPoint2f();
-        output.alloc(4);
-        output.put(0, 0, 0, 0);
-        output.put(1,0,SCREEN_WIDTH,0);
-        output.put(2,0,SCREEN_WIDTH,SCREEN_WIDTH);
-        output.put(3,0,0,SCREEN_WIDTH);
-        Mat homography = findHomography(src, output);
+        Mat homography = findHomography(src, homoWorld);
         warpPerspective(eye,warpedImage,homography,new Size(SCREEN_WIDTH, SCREEN_WIDTH));
-
     }
 
     private List<MatOfPoint> findContoursFromEdges(MatOfPoint2f input) {
@@ -235,38 +261,42 @@ public class CVMain extends ApplicationAdapter {
         UtilAR.imDrawBackground(eye);
     }
 
-    private int findId() {
+
+    private List<MatOfPoint2f> findIdPolygon() {
         List<MatOfPoint> contours = findContoursFromEdges(warpedImage);
-        List<MatOfPoint> rectContours = new ArrayList<MatOfPoint>();
+        List<MatOfPoint2f> idPolygons = new ArrayList<MatOfPoint2f>();
+        List<MatOfPoint> idPolygonsCvt = new ArrayList<MatOfPoint>();
         for(MatOfPoint cont : contours) {
             MatOfPoint2f cont2f = new MatOfPoint2f(cont.toArray());
-            //double cont_len = arcLength(cont2f, true);
             MatOfPoint2f polygon = new MatOfPoint2f();
             approxPolyDP(cont2f, polygon, 8, true);
 
             MatOfPoint polygonCvt = new MatOfPoint(polygon.toArray());
 
-            // check for rectangles
-            //if(polygon.size().height == 4 && contourArea(polygonCvt) > 4000 && isContourConvex(polygonCvt) && isClockwise(polygon)) {
+            // check for ids
 
             if (!isContourConvex(polygonCvt) && polygon.size().height >= 6) {
-                System.out.println(polygon.size().height);
-                rectContours.add(polygonCvt);
+                idPolygons.add(polygon);
+                idPolygonsCvt.add(polygonCvt);
             }
-            //}
-        }
-        drawContours(warpedImage, rectContours, -1, new Scalar(255, 0, 0));
-        UtilAR.imShow(warpedImage);
 
-        if (rectContours.size() == 1) {
-            MatOfPoint cont = rectContours.get(0);
-            double id = cont.size().height;
-            id = (id - 6) / 4.0;       // this works!
-            return (int)id;
         }
-        else {
-            return -1;
-        }
+
+        // DEBUGGING --
+        //drawContours(warpedImage, idPolygonsCvt, -1, new Scalar(255, 0, 0));
+        //UtilAR.imShow(warpedImage);
+
+        return idPolygons;
+    }
+
+    private MatOfPoint3f getObjCoords(MatOfPoint2f polygon) {
+
+        int idx = findOrigin(polygon);
+        System.out.println("Origin index: " + idx);
+
+        return rectObjs.get(idx);
+
+
     }
 
     private void handleRectangles() {
@@ -275,30 +305,83 @@ public class CVMain extends ApplicationAdapter {
 
 
         for (MatOfPoint2f rect : rects) {
-            
+
+            drawHomography(rect);
+            List<MatOfPoint2f> idPolygons = findIdPolygon(); // should only contain 1 element!
+
+            MatOfPoint3f rectObjCoords = null;
+            int theId = -1;
+            if (idPolygons.size() == 1) {
+                MatOfPoint2f polygon = idPolygons.get(0);
+                rectObjCoords = getObjCoords(polygon);
+
+
+                double id = polygon.size().height;
+                id = (id - 6) / 4.0;       // this works!
+
+                theId = (int)id;
+            }
+            System.out.println("ID: " + theId);
+
             Mat rotation = new Mat();
             Mat translation = new Mat();
-            solvePnP(rectObj, rect, intrinsics, distortion, rotation, translation, false, ITERATIVE);
 
-            if (count % 100 == 0) {
-                //System.out.println("Coords:");
-                //System.out.println("obj: " + rectObj.dump());
-                //System.out.println("img: " + rect.dump());
-                //System.out.println();
-                //System.out.println("--------------------");
-                //System.out.println("RT:");
-                //System.out.println("R: " + rotation.dump());
-                //System.out.println("T: " + translation.dump());
-                //System.out.println("--------------------");
+            if (rectObjCoords != null) {
+                solvePnP(rectObjCoords, rect, intrinsics, distortion, rotation, translation, false, ITERATIVE);
+
+                UtilAR.setCameraByRT(rotation, translation, cam);
+                renderGraphics(theId);
             }
 
-            UtilAR.setCameraByRT(rotation, translation, cam);
-            renderGraphics();
-            drawHomography(rect);
-            System.out.println("ID: " + findId());
+
         }
 
+    }
 
+    private int findOrigin(MatOfPoint2f polygon) {
+        Vector2 polyOrigin = findOrientation(polygon);
+        float nearestDist = Float.MAX_VALUE;
+        int idx = 0;
+
+        for (int i = 0; i < homoWorld.size().height; i++) {
+            double[] coords = homoWorld.get(i, 0);
+            Vector2 p = new Vector2((float)coords[0], (float)coords[1]);
+            float currentDist = p.dst(polyOrigin);
+
+            if (nearestDist > currentDist) {
+                nearestDist = currentDist;
+                idx = i;
+            }
+        }
+
+        return idx;
+    }
+
+    private Vector2 findOrientation(MatOfPoint2f polygon) {
+
+        float maxSum = 0.0f;
+        Vector2 maxP = new Vector2();
+        int size = (int)polygon.size().height;
+
+        for (int i = 0; i < size; i++) {
+            double[] p1 = polygon.get(i, 0);
+            int i2 = (i+1) % size;
+            double[] p2 = polygon.get(i2, 0);
+            int i3 = (i+2) % size;
+            double[] p3 = polygon.get(i3, 0);
+
+            Vector3 v1 = new Vector3((float)(p1[0]-p2[0]), 0.0f, (float)(p1[1]-p2[1]));
+            Vector3 v2 = new Vector3((float)(p3[0]-p2[0]), 0.0f, (float)(p3[1]-p2[1]));
+
+            float sum = v1.len() + v2.len();
+            if (sum > maxSum) {
+                maxSum = sum;
+                maxP = new Vector2((float)p2[0], (float)p2[1]);
+            }
+        }
+
+        System.out.println(maxP);
+        return maxP;
     }
 
     private boolean isClockwise(MatOfPoint2f rect) {
@@ -317,7 +400,7 @@ public class CVMain extends ApplicationAdapter {
 
 
 
-    private void renderGraphics() {
+    private void renderGraphics(int theId) {
         // render model objects
         modelBatch.begin(cam);
 
@@ -379,7 +462,7 @@ public class CVMain extends ApplicationAdapter {
         cam.position.set(3f, 3f, 3f);
         cam.lookAt(originPosition);
         cam.up.set(0, 1, 0);
-        System.out.println("up vector = " + cam.up);
+        //System.out.println("up vector = " + cam.up);
         cam.near = .0001f;
         cam.far = 300f;
         cam.update();
