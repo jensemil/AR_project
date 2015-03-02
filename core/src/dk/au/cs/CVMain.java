@@ -30,6 +30,9 @@ import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static org.opencv.calib3d.Calib3d.*;
 import static org.opencv.imgproc.Imgproc.*;
@@ -144,7 +147,15 @@ public class CVMain extends ApplicationAdapter {
             System.out.println("Video Camera OK");
         }
 
-
+        //This is simply to test the animations
+        Runnable testAnimate = new Runnable() {
+            @Override
+            public void run() {
+                animateSquare();
+            }
+        };
+        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+        executor.scheduleAtFixedRate(testAnimate, 0, 6, TimeUnit.SECONDS);
 
     }
 
@@ -171,25 +182,9 @@ public class CVMain extends ApplicationAdapter {
         modelInstance.materials.add(mat);
 
         controller = new AnimationController(modelInstance);
+
         System.out.println(modelInstance.animations.first().id);
-        controller.setAnimation("Cube|RotateAnim",1, new AnimationController.AnimationListener(){
-
-            @Override
-            public void onEnd(AnimationController.AnimationDesc animation) {
-                // this will be called when the current animation is done.
-                // queue up another animation called "balloon".
-                // Passing a negative to loop count loops forever.  1f for speed is normal speed.
-                controller.queue("Cube|RotateAnim",-1,1f,null,0f);
-            }
-
-            @Override
-            public void onLoop(AnimationController.AnimationDesc animation) {
-                // TODO Auto-generated method stub
-
-            }
-
-        });
-
+        System.out.println(modelInstance.animations.get(1).id);
     }
 
     @Override
@@ -213,13 +208,32 @@ public class CVMain extends ApplicationAdapter {
         handleRectangles();
     }
 
+    private void animateSquare() {
+        controller.setAnimation("Cube|fadeOut",1, new AnimationController.AnimationListener(){
+
+            @Override
+            public void onEnd(AnimationController.AnimationDesc animation) {
+                // this will be called when the current animation is done.
+                // queue up another animation called "balloon".
+                // Passing a negative to loop count loops forever.  1f for speed is normal speed.
+                controller.queue("Cube|fadeIn",1,1f,null,0f);
+            }
+
+            @Override
+            public void onLoop(AnimationController.AnimationDesc animation) {
+                // TODO Auto-generated method stub
+
+            }
+        });
+    }
+
     private void drawHomography(MatOfPoint2f src) {
         MatOfPoint2f output = new MatOfPoint2f();
         output.alloc(4);
         output.put(0, 0, 0, 0);
         output.put(1,0,SCREEN_WIDTH,0);
         output.put(2,0,SCREEN_WIDTH,SCREEN_WIDTH);
-        output.put(3,0,0,SCREEN_WIDTH);
+        output.put(3, 0, 0,SCREEN_WIDTH);
         Mat homography = findHomography(src, output);
         warpPerspective(eye,warpedImage,homography,new Size(SCREEN_WIDTH, SCREEN_WIDTH));
 
@@ -302,17 +316,6 @@ public class CVMain extends ApplicationAdapter {
             Mat translation = new Mat();
             solvePnP(rectObj, rect, intrinsics, distortion, rotation, translation, false, ITERATIVE);
 
-            if (count % 100 == 0) {
-                //System.out.println("Coords:");
-                //System.out.println("obj: " + rectObj.dump());
-                //System.out.println("img: " + rect.dump());
-                //System.out.println();
-                //System.out.println("--------------------");
-                //System.out.println("RT:");
-                //System.out.println("R: " + rotation.dump());
-                //System.out.println("T: " + translation.dump());
-                //System.out.println("--------------------");
-            }
 
             UtilAR.setCameraByRT(rotation, translation, cam);
             renderGraphics();
@@ -400,7 +403,6 @@ public class CVMain extends ApplicationAdapter {
         cam.position.set(3f, 3f, 3f);
         cam.lookAt(originPosition);
         cam.up.set(0, 1, 0);
-        System.out.println("up vector = " + cam.up);
         cam.near = .0001f;
         cam.far = 300f;
         cam.update();
