@@ -243,6 +243,12 @@ public class CVMain extends ApplicationAdapter {
 
         findRectangles();
         handleRectangles();
+        checkForCollision();
+
+    }
+
+    private void checkForCollision() {
+
     }
 
     private void animateSquare() {
