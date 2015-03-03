@@ -36,6 +36,8 @@ import static org.opencv.imgproc.Imgproc.*;
 
 public class CVMain extends ApplicationAdapter {
 
+
+    private SoundHandler soundHandler = new SoundHandler();
     // 3D graphics
     private PerspectiveCamera cam;
     private ModelBuilder modelBuilder;
@@ -156,6 +158,11 @@ public class CVMain extends ApplicationAdapter {
         else{
             System.out.println("Video Camera OK");
         }
+        soundHandler.start();
+        soundHandler.setInstrumentState("1", "on");
+        soundHandler.setInstrumentState("2", "on");
+        soundHandler.setInstrumentState("3", "on");
+        soundHandler.setInstrumentState("4", "on");
 
 
 
