@@ -105,7 +105,7 @@ public class CVMain extends ApplicationAdapter {
 
         // OpenCV
 
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+
 
         homoWorld = new MatOfPoint2f();
         homoWorld.alloc(4);
@@ -200,6 +200,9 @@ public class CVMain extends ApplicationAdapter {
         // Now create an instance.  Instance holds the positioning data, etc of an instance of your model
         modelInstance = new ModelInstance(model);
 
+        Vector3 pos = new Vector3();
+        pos.dst(pos);
+        modelInstance.transform.getTranslation(pos);
 
         // setup material with texture
         mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
@@ -378,7 +381,8 @@ public class CVMain extends ApplicationAdapter {
             if (rectObjCoords != null) {
                 solvePnP(rectObjCoords, rect, intrinsics, distortion, rotation, translation, false, ITERATIVE);
 
-                UtilAR.setCameraByRT(rotation, translation, cam);
+                //UtilAR.setCameraByRT(rotation, translation, cam);
+                UtilAR.setTransformByRT(rotation, translation, modelInstance.transform);
                 renderGraphics(theId);
             }
 
@@ -452,7 +456,9 @@ public class CVMain extends ApplicationAdapter {
         // render model objects
         modelBatch.begin(cam);
         controller.update(Gdx.graphics.getDeltaTime());
-        modelInstance.transform.idt();
+
+
+        //modelInstance.transform.idt();
         //Vector3 position = new Vector3(0, 0.5f, 0);
         modelInstance.transform.translate(originPosition);
 
@@ -513,6 +519,7 @@ public class CVMain extends ApplicationAdapter {
         cam.near = .0001f;
         cam.far = 300f;
         cam.update();
+        UtilAR.setNeutralCamera(cam);
     }
 
 
