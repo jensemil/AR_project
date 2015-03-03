@@ -90,9 +90,8 @@
 #X obj 1100 566 *~ 0;
 #X msg 654 501 1;
 #X obj 256 639 route on off start;
-#X obj 1579 772 loadbang;
-#X obj 1527 548 osc~;
-#X msg 1654 813 GLOBAL_PDDP_DSP_TOGGLE set 1;
+#X obj 1522 563 loadbang;
+#X msg 1493 622 \; pd dsp 1;
 #X connect 1 0 2 0;
 #X connect 2 0 66 0;
 #X connect 2 1 8 0;
@@ -188,4 +187,4 @@
 #X connect 68 0 46 0;
 #X connect 68 1 54 0;
 #X connect 68 2 10 0;
-#X connect 69 0 71 0;
+#X connect 69 0 70 0;

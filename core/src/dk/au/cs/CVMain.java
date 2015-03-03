@@ -159,10 +159,6 @@ public class CVMain extends ApplicationAdapter {
             System.out.println("Video Camera OK");
         }
         soundHandler.start();
-        soundHandler.setInstrumentState("1", "on");
-        soundHandler.setInstrumentState("2", "on");
-        soundHandler.setInstrumentState("3", "on");
-        soundHandler.setInstrumentState("4", "on");
 
 
 
@@ -278,7 +274,7 @@ public class CVMain extends ApplicationAdapter {
 
     private void drawHomography(MatOfPoint2f src) {
         Mat homography = findHomography(src, homoWorld);
-        warpPerspective(eye,warpedImage,homography,new Size(SCREEN_WIDTH, SCREEN_WIDTH));
+        warpPerspective(eye, warpedImage, homography, new Size(SCREEN_WIDTH, SCREEN_WIDTH));
     }
 
     private List<MatOfPoint> findContoursFromEdges(MatOfPoint2f input) {
@@ -509,6 +505,7 @@ public class CVMain extends ApplicationAdapter {
                 stageActor.addActor(actor);
                 // start music of actor
                 System.out.println("start music for " + actor.getId());
+                soundHandler.setInstrumentState(actor.getId() + "", "on");
             }
 
 
@@ -517,6 +514,7 @@ public class CVMain extends ApplicationAdapter {
                 stageActor.removeActor(actor);
                 //stop music of actor
                 System.out.println("stop music for " + actor.getId());
+                soundHandler.setInstrumentState(actor.getId() + "", "off");
             }
 
         }
