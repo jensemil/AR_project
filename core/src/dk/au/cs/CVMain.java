@@ -153,15 +153,7 @@ public class CVMain extends ApplicationAdapter {
             System.out.println("Video Camera OK");
         }
 
-        //This is simply to test the animations
-        Runnable testAnimate = new Runnable() {
-            @Override
-            public void run() {
-                animateSquare();
-            }
-        };
-        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(testAnimate, 0, 6, TimeUnit.SECONDS);
+
 
     }
 
@@ -202,7 +194,9 @@ public class CVMain extends ApplicationAdapter {
         /*model = modelBuilder.createBox(1f, 1f, 1f, mat, VertexAttributes.Usage.Position
                 | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);     */
 
-        model = modelLoader.loadModel(Gdx.files.getFileHandle("glassSquare.g3db", Files.FileType.Internal));
+        //model = modelLoader.loadModel(Gdx.files.getFileHandle("glassSquare.g3db", Files.FileType.Internal));
+        model = modelBuilder.createBox(1f, 1f, 1f, mat, VertexAttributes.Usage.Position
+                | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);
         // Now create an instance.  Instance holds the positioning data, etc of an instance of your model
         modelInstance = new ModelInstance(model);
 
@@ -218,8 +212,18 @@ public class CVMain extends ApplicationAdapter {
 
         controller = new AnimationController(modelInstance);
 
-        System.out.println(modelInstance.animations.first().id);
-        System.out.println(modelInstance.animations.get(1).id);
+//        System.out.println(modelInstance.animations.first().id);
+//        System.out.println(modelInstance.animations.get(1).id);
+
+        //This is simply to test the animations
+        Runnable testAnimate = new Runnable() {
+            @Override
+            public void run() {
+                animateSquare();
+            }
+        };
+        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+        executor.scheduleAtFixedRate(testAnimate, 0, 6, TimeUnit.SECONDS);
     }
 
     @Override
@@ -244,14 +248,14 @@ public class CVMain extends ApplicationAdapter {
     }
 
     private void animateSquare() {
-        controller.setAnimation("Cube|fadeOut",1, new AnimationController.AnimationListener(){
+        controller.setAnimation("Cube|fadeOut", 1, new AnimationController.AnimationListener() {
 
             @Override
             public void onEnd(AnimationController.AnimationDesc animation) {
                 // this will be called when the current animation is done.
                 // queue up another animation called "balloon".
                 // Passing a negative to loop count loops forever.  1f for speed is normal speed.
-                controller.queue("Cube|fadeIn",1,1f,null,0f);
+                controller.queue("Cube|fadeIn", 1, 1f, null, 0f);
             }
 
             @Override
@@ -447,6 +451,7 @@ public class CVMain extends ApplicationAdapter {
         modelInstance.transform.translate(originPosition);
 
         modelBatch.render(modelInstance, environment);
+        modelInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(theId / (float) 5, theId / (float) 5, 0.1f, 1.0f)));
         modelBatch.end();
 
     }
