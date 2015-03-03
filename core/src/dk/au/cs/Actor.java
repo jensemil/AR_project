@@ -1,7 +1,7 @@
 package dk.au.cs;
 
 
-import com.badlogic.gdx.graphics.g3d.Model;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import org.opencv.core.Mat;
 
 public class Actor {
@@ -22,20 +22,20 @@ public class Actor {
         this.translation = translation;
     }
 
-    public Model getModel() {
+    public ModelInstance getModelInstance() {
         return model;
     }
 
-    public void setModel(Model model) {
+    public void setModelInstance(ModelInstance model) {
         this.model = model;
     }
 
     private Mat rotation;
     private Mat translation;
-    private Model model;
+    private ModelInstance model;
     private int id;
 
-    public Actor(Model model, int id) {
+    public Actor(ModelInstance model, int id) {
         this.model = model;
         this.id = id;
     }

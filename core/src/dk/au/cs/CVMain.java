@@ -19,6 +19,7 @@ import com.badlogic.gdx.graphics.g3d.utils.AnimationController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.UBJsonReader;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
@@ -179,11 +180,11 @@ public class CVMain extends ApplicationAdapter {
 //        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 //        executor.scheduleAtFixedRate(testAnimate, 0, 6, TimeUnit.SECONDS);
         actorMap = new HashMap<Integer, Actor>();
-        actorMap.put(0, new Actor(createSquareModel(),0 ));
-        actorMap.put(1, new Actor(createSquareModel(),1));
-        actorMap.put(2, new Actor(createSquareModel(),2));
-        actorMap.put(3, new Actor(createSquareModel(),3));
-        actorMap.put(4, new Actor(createSquareModel(),4));
+        actorMap.put(0, new Actor(new ModelInstance(createSquareModel()),0 ));
+        actorMap.put(1, new Actor(new ModelInstance(createSquareModel()),1));
+        actorMap.put(2, new Actor(new ModelInstance(createSquareModel()),2));
+        actorMap.put(3, new Actor(new ModelInstance(createSquareModel()),3));
+        actorMap.put(4, new Actor(new ModelInstance(createSquareModel()),4));
     }
 
     private void setupRectObjs() {
@@ -374,7 +375,7 @@ public class CVMain extends ApplicationAdapter {
             Mat rotation = new Mat();
             Mat translation = new Mat();
 
-            boolean idFound = (id % 4 == 2 && id >= 6 && id <= 22);
+            //boolean idFound = (id % 4 == 2 && id >= 6 && id <= 22);
             if (rectObjCoords != null && theId <= 4) {
                 solvePnP(rectObjCoords, rect, intrinsics, distortion, rotation, translation, false, ITERATIVE);
                 actorMap.get(theId).setTranslation(translation);
@@ -454,20 +455,21 @@ public class CVMain extends ApplicationAdapter {
 
 
     private void renderGraphics() {
-        //Array<ModelInstance> modelInstanceList = new Array<ModelInstance>();
+        Array<ModelInstance> modelInstances = new Array<ModelInstance>();
         for(Actor actor : actorMap.values()) {
             if(actor.isActive()) {
                 UtilAR.setCameraByRT(actor.getRotation(), actor.getTranslation(), cam);
-                ModelInstance modelInstance = new ModelInstance(actor.getModel());
+                ModelInstance modelInstance = actor.getModelInstance();
                 modelInstance.transform.idt();
                 modelInstance.transform.translate(originPosition);
                 modelInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(actor.getId() / (float) 5, actor.getId() / (float) 5, 0.1f, 1.0f)));
-                //modelInstanceList.add(modelInstance);
-                modelBatch.begin(cam);
-                modelBatch.render(modelInstance, environment);
-                modelBatch.end();
+
+                modelInstances.add(modelInstance);
             }
         }
+        modelBatch.begin(cam);
+        modelBatch.render(modelInstances);
+        modelBatch.end();
     }
 
 
