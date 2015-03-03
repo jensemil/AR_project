@@ -200,9 +200,6 @@ public class CVMain extends ApplicationAdapter {
         // Now create an instance.  Instance holds the positioning data, etc of an instance of your model
         modelInstance = new ModelInstance(model);
 
-        Vector3 pos = new Vector3();
-        pos.dst(pos);
-        modelInstance.transform.getTranslation(pos);
 
         // setup material with texture
         mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
@@ -253,7 +250,12 @@ public class CVMain extends ApplicationAdapter {
     }
 
     private void checkForCollision() {
+        Vector3 pos = new Vector3();
 
+        modelInstance.transform.getTranslation(pos);
+
+        float dist = pos.dst(pos);
+        System.out.println("distance : " + dist);
     }
 
     private void animateSquare() {
