@@ -180,7 +180,7 @@ public class CVMain extends ApplicationAdapter {
 //        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 //        executor.scheduleAtFixedRate(testAnimate, 0, 6, TimeUnit.SECONDS);
         actorMap = new HashMap<Integer, Actor>();
-        actorMap.put(0, new Actor(new ModelInstance(createSquareModel()),0 ));
+        actorMap.put(0, new StageActor(new ModelInstance(createSquareModel()),0 ));
         actorMap.put(1, new Actor(new ModelInstance(createSquareModel()),1));
         actorMap.put(2, new Actor(new ModelInstance(createSquareModel()), 2));
         actorMap.put(3, new Actor(new ModelInstance(createSquareModel()), 3));
@@ -244,18 +244,11 @@ public class CVMain extends ApplicationAdapter {
 
         findRectangles();
         handleRectangles();
-        //checkForCollision();
+
 
     }
 
-    private void checkForCollision() {
-        Vector3 pos = new Vector3();
 
-        modelInstance.transform.getTranslation(pos);
-
-        float dist = pos.dst(pos);
-        System.out.println("distance : " + dist);
-    }
 
     private void animateSquare() {
         controller.setAnimation("Cube|fadeOut", 1, new AnimationController.AnimationListener() {
@@ -368,12 +361,11 @@ public class CVMain extends ApplicationAdapter {
                 MatOfPoint2f polygon = idPolygons.get(0);
                 rectObjCoords = getObjCoords(polygon);
 
-
                 id = polygon.size().height;
                 //System.out.println("Id before: " + id);
                 theId = (int) ((id - 6) / 4.0);       // this works!
             }
-            System.out.println("ID after: " + theId);
+            //System.out.println("ID after: " + theId);
 
 
 
@@ -491,6 +483,37 @@ public class CVMain extends ApplicationAdapter {
         modelBatch.begin(cam);
         modelBatch.render(modelInstances);
         modelBatch.end();
+
+        StageActor stageActor = (StageActor) actorMap.get(0);
+        for(Actor actor : actorMap.values()) {
+
+            handleCollision(stageActor, actor);
+
+        }
+    }
+
+    private void handleCollision(StageActor stageActor, Actor actor) {
+        if (stageActor.isActive() &&
+                actor.isActive() &&
+                stageActor.checkForCollision(actor) &&
+                stageActor.getId() < actor.getId()) {
+
+            if (!stageActor.hasActor(actor)) {
+                stageActor.addActor(actor);
+                // start music of actor
+                System.out.println("start music for " + actor.getId());
+            }
+
+
+        } else {
+            if (stageActor.hasActor(actor)) {
+                stageActor.removeActor(actor);
+                //stop music of actor
+                System.out.println("stop music for " + actor.getId());
+            }
+
+        }
+
     }
 
 
