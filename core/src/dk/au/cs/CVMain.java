@@ -19,6 +19,7 @@ import com.badlogic.gdx.graphics.g3d.utils.AnimationController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.UBJsonReader;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
@@ -27,10 +28,8 @@ import org.opencv.highgui.VideoCapture;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import static org.opencv.calib3d.Calib3d.*;
 import static org.opencv.imgproc.Imgproc.*;
@@ -42,6 +41,9 @@ public class CVMain extends ApplicationAdapter {
     private ModelBuilder modelBuilder;
     private ModelBatch modelBatch;
     private ModelInstance modelInstance;
+
+    private HashMap<Integer, Actor> actorMap;
+
     private AnimationController controller;
 
 
@@ -97,7 +99,9 @@ public class CVMain extends ApplicationAdapter {
         modelBatch = new ModelBatch();
         // setup model and build cube
         modelBuilder = new ModelBuilder();
-        createModel();
+
+        setupActorMap();
+
         setupCamera();
         setupEnvironment();
 
@@ -157,6 +161,32 @@ public class CVMain extends ApplicationAdapter {
 
     }
 
+    private void setupActorMap() {
+//        // Now create an instance.  Instance holds the positioning data, etc of an instance of your model
+//        modelInstance = new ModelInstance(model);
+//
+//        controller = new AnimationController(modelInstance);
+//
+////        System.out.println(modelInstance.animations.first().id);
+////        System.out.println(modelInstance.animations.get(1).id);
+//
+//        //This is simply to test the animations
+//        Runnable testAnimate = new Runnable() {
+//            @Override
+//            public void run() {
+//                animateSquare();
+//            }
+//        };
+//        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+//        executor.scheduleAtFixedRate(testAnimate, 0, 6, TimeUnit.SECONDS);
+        actorMap = new HashMap<Integer, Actor>();
+        actorMap.put(0, new Actor(new ModelInstance(createSquareModel()),0 ));
+        actorMap.put(1, new Actor(new ModelInstance(createSquareModel()),1));
+        actorMap.put(2, new Actor(new ModelInstance(createSquareModel()), 2));
+        actorMap.put(3, new Actor(new ModelInstance(createSquareModel()), 3));
+        actorMap.put(4, new Actor(new ModelInstance(createSquareModel()), 4));
+    }
+
     private void setupRectObjs() {
 
         rectObjs = new ArrayList<MatOfPoint3f>();
@@ -172,58 +202,27 @@ public class CVMain extends ApplicationAdapter {
         }
     }
 
+    private Model createSquareModel() {
+        // setup material with texture
+        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
+                0.3f, 1.0f)));
+        // blending
+        mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
+                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
 
-    private void createModel() {
+        Model model = modelBuilder.createBox(1f, 1f, 1f, mat, VertexAttributes.Usage.Position
+                | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);
+        return model;
+    }
+
+    private Model createModel(String modelFileName) {
         // Model loader needs a binary json reader to decode
         UBJsonReader jsonReader = new UBJsonReader();
         // Create a model loader passing in our json reader
         G3dModelLoader modelLoader = new G3dModelLoader(jsonReader);
-        Model model;
-        // Now load the model by name
-        // Note, the model (g3db file ) and textures need to be added to the assets folder of the Android proj
+        Model model = modelLoader.loadModel(Gdx.files.getFileHandle(modelFileName, Files.FileType.Internal));
 
-        //model = modelLoader.loadModel(Gdx.files.getFileHandle("first.g3db", Files.FileType.Internal));
-
-        // setup material with texture
-        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
-                0.3f, 1.0f)));
-        // blending
-        mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
-                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
-
-        /*model = modelBuilder.createBox(1f, 1f, 1f, mat, VertexAttributes.Usage.Position
-                | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);     */
-
-        //model = modelLoader.loadModel(Gdx.files.getFileHandle("glassSquare.g3db", Files.FileType.Internal));
-        model = modelBuilder.createBox(1f, 1f, 1f, mat, VertexAttributes.Usage.Position
-                | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);
-        // Now create an instance.  Instance holds the positioning data, etc of an instance of your model
-        modelInstance = new ModelInstance(model);
-
-
-        // setup material with texture
-        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
-                0.3f, 1.0f)));
-        // blending
-        mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
-                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
-
-        modelInstance.materials.add(mat);
-
-        controller = new AnimationController(modelInstance);
-
-//        System.out.println(modelInstance.animations.first().id);
-//        System.out.println(modelInstance.animations.get(1).id);
-
-        //This is simply to test the animations
-        Runnable testAnimate = new Runnable() {
-            @Override
-            public void run() {
-                animateSquare();
-            }
-        };
-        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(testAnimate, 0, 6, TimeUnit.SECONDS);
+        return model;
     }
 
     @Override
@@ -245,7 +244,7 @@ public class CVMain extends ApplicationAdapter {
 
         findRectangles();
         handleRectangles();
-        checkForCollision();
+        //checkForCollision();
 
     }
 
@@ -345,7 +344,7 @@ public class CVMain extends ApplicationAdapter {
     private MatOfPoint3f getObjCoords(MatOfPoint2f polygon) {
 
         int idx = findOrigin(polygon);
-        System.out.println("Origin index: " + idx);
+        //System.out.println("Origin index: " + idx);
 
         return rectObjs.get(idx);
 
@@ -356,7 +355,7 @@ public class CVMain extends ApplicationAdapter {
 
         count++;
 
-
+        clearActorMapRT();
         for (MatOfPoint2f rect : rects) {
 
             drawHomography(rect);
@@ -364,32 +363,40 @@ public class CVMain extends ApplicationAdapter {
 
             MatOfPoint3f rectObjCoords = null;
             int theId = -1;
+            double id = -1;
             if (idPolygons.size() == 1) {
                 MatOfPoint2f polygon = idPolygons.get(0);
                 rectObjCoords = getObjCoords(polygon);
 
 
-                double id = polygon.size().height;
-                id = (id - 6) / 4.0;       // this works!
-
-                theId = (int)id;
+                id = polygon.size().height;
+                //System.out.println("Id before: " + id);
+                theId = (int) ((id - 6) / 4.0);       // this works!
             }
-            System.out.println("ID: " + theId);
+            System.out.println("ID after: " + theId);
+
+
 
             Mat rotation = new Mat();
             Mat translation = new Mat();
 
-
-            if (rectObjCoords != null) {
+            //boolean idFound = (id % 4 == 2 && id >= 6 && id <= 22);
+            if (rectObjCoords != null && theId <= 4) {
                 solvePnP(rectObjCoords, rect, intrinsics, distortion, rotation, translation, false, ITERATIVE);
 
-                //UtilAR.setCameraByRT(rotation, translation, cam);
-                UtilAR.setTransformByRT(rotation, translation, modelInstance.transform);
-                renderGraphics(theId);
+
+                actorMap.get(theId).setTranslation(translation);
+                actorMap.get(theId).setRotation(rotation);
             }
-
         }
+        renderGraphics();
+    }
 
+    private void clearActorMapRT() {
+        for(Actor actor : actorMap.values()) {
+            actor.setTranslation(null);
+            actor.setRotation(null);
+        }
     }
 
     private int findOrigin(MatOfPoint2f polygon) {
@@ -434,7 +441,7 @@ public class CVMain extends ApplicationAdapter {
             }
         }
 
-        System.out.println(maxP);
+        //System.out.println(maxP);
         return maxP;
     }
 
@@ -454,6 +461,7 @@ public class CVMain extends ApplicationAdapter {
 
 
 
+/*<<<<<<< HEAD
     private void renderGraphics(int theId) {
         // render model objects
         modelBatch.begin(cam);
@@ -463,11 +471,26 @@ public class CVMain extends ApplicationAdapter {
         //modelInstance.transform.idt();
         //Vector3 position = new Vector3(0, 0.5f, 0);
         modelInstance.transform.translate(originPosition);
+=======*/
+    private void renderGraphics() {
+        Array<ModelInstance> modelInstances = new Array<ModelInstance>();
+        for(Actor actor : actorMap.values()) {
+            if(actor.isActive()) {
 
-        modelBatch.render(modelInstance, environment);
-        modelInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(theId / (float) 5, theId / (float) 5, 0.1f, 1.0f)));
+                //UtilAR.setCameraByRT(actor.getRotation(), actor.getTranslation(), cam);
+                ModelInstance modelInstance = actor.getModelInstance();
+                //modelInstance.transform.idt();
+                UtilAR.setTransformByRT(actor.getRotation(), actor.getTranslation(), modelInstance.transform);
+                modelInstance.transform.translate(originPosition);
+                modelInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(actor.getId() / (float) 5, actor.getId() / (float) 5, 0.1f, 1.0f)));
+
+                modelInstances.add(modelInstance);
+
+            }
+        }
+        modelBatch.begin(cam);
+        modelBatch.render(modelInstances);
         modelBatch.end();
-
     }
 
 
