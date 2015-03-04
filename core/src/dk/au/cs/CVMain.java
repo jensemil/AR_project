@@ -27,6 +27,7 @@ import org.opencv.highgui.VideoCapture;
 
 import org.opencv.imgproc.Imgproc;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -91,7 +92,6 @@ public class CVMain extends ApplicationAdapter {
 
     @Override
 	public void create () {
-
         // Graphics
 
         originPosition = new Vector3(0.5f, 0.5f, 0.5f);
@@ -140,9 +140,6 @@ public class CVMain extends ApplicationAdapter {
         distortion = UtilAR.getDefaultDistortionCoefficients();
 
         setupRectObjs();
-        for (MatOfPoint3f rect : rectObjs) {
-            System.out.println(rect.dump());
-        }
 
 
         //Ensure Camera is ready!
