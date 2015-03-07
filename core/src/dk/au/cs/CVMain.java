@@ -57,7 +57,7 @@ public class CVMain extends ApplicationAdapter {
     private VideoCapture cap;
     private MatOfPoint2f eye;
     private MatOfPoint2f corners;
-    private MatOfPoint2f warpedImage;
+    private MatOfPoint2f warpedImage; //The image result of the homography
     private Mat intrinsics;
     private MatOfDouble distortion;
     private Size rectSize = new Size(2,2);
@@ -67,7 +67,6 @@ public class CVMain extends ApplicationAdapter {
 
     private List<MatOfPoint2f> rects = new ArrayList<MatOfPoint2f>();
     private List<MatOfPoint3f> rectObjs;
-    int count = 0;
     private MatOfPoint2f homoWorld;
 
 
@@ -159,6 +158,7 @@ public class CVMain extends ApplicationAdapter {
         return model;
     }
 
+    //This is used to get the right orientation
     private void setupRectObjs() {
         rectObjs = new ArrayList<MatOfPoint3f>();
         for (int i = 0; i < 4; i++) {
@@ -184,25 +184,9 @@ public class CVMain extends ApplicationAdapter {
         handleRectangles();
     }
 
+    //<---- Finding our rectangles --->
 
-
-    private void animateSquare() {
-        controller.setAnimation("Cube|fadeOut", 1, new AnimationController.AnimationListener() {
-            @Override
-            public void onEnd(AnimationController.AnimationDesc animation) {
-                controller.queue("Cube|fadeIn", 1, 1f, null, 0f);
-            }
-            @Override
-            public void onLoop(AnimationController.AnimationDesc animation) {
-            }
-        });
-    }
-
-    private void drawHomography(MatOfPoint2f src) {
-        Mat homography = findHomography(src, homoWorld);
-        warpPerspective(eye, warpedImage, homography, new Size(SCREEN_WIDTH, SCREEN_WIDTH));
-    }
-
+    //This is where opecv find the actual contours
     private List<MatOfPoint> findContoursFromEdges(MatOfPoint2f input) {
         Mat detectedEdges = Mat.eye(128, 128, CvType.CV_8UC1);
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
@@ -213,18 +197,16 @@ public class CVMain extends ApplicationAdapter {
         return contours;
     }
 
+    //This is where we find our rectangles and put them in the field -> rects
     private void findRectangles() {
         List<MatOfPoint> contours = findContoursFromEdges(eye);
         List<MatOfPoint> rectContours = new ArrayList<MatOfPoint>();
         rects = new ArrayList<MatOfPoint2f>();
         for(MatOfPoint cont : contours) {
             MatOfPoint2f cont2f = new MatOfPoint2f(cont.toArray());
-            //double cont_len = arcLength(cont2f, true);
             MatOfPoint2f polygon = new MatOfPoint2f();
             approxPolyDP(cont2f, polygon, 8, true);
-
             MatOfPoint polygonCvt = new MatOfPoint(polygon.toArray());
-
             // check for rectangles
             if(polygon.size().height == 4 && contourArea(polygonCvt) > 4000 && isContourConvex(polygonCvt) && isClockwise(polygon)) {
                 rectContours.add(polygonCvt);
@@ -235,7 +217,7 @@ public class CVMain extends ApplicationAdapter {
         UtilAR.imDrawBackground(eye);
     }
 
-
+    //This method is a lot like findRectangles, but now for the id polygons in the homography
     private List<MatOfPoint2f> findIdPolygon() {
         List<MatOfPoint> contours = findContoursFromEdges(warpedImage);
         List<MatOfPoint2f> idPolygons = new ArrayList<MatOfPoint2f>();
@@ -244,68 +226,57 @@ public class CVMain extends ApplicationAdapter {
             MatOfPoint2f cont2f = new MatOfPoint2f(cont.toArray());
             MatOfPoint2f polygon = new MatOfPoint2f();
             approxPolyDP(cont2f, polygon, 8, true);
-
             MatOfPoint polygonCvt = new MatOfPoint(polygon.toArray());
-
             // check for ids
-
             if (!isContourConvex(polygonCvt) && polygon.size().height >= 6) {
                 idPolygons.add(polygon);
                 idPolygonsCvt.add(polygonCvt);
             }
-
         }
-
         // DEBUGGING --
         //drawContours(warpedImage, idPolygonsCvt, -1, new Scalar(255, 0, 0));
         //UtilAR.imShow(warpedImage);
-
         return idPolygons;
     }
 
-    private MatOfPoint3f getObjCoords(MatOfPoint2f polygon) {
+    //Tell if clockwise or not == is it black or white square
+    private boolean isClockwise(MatOfPoint2f rect) {
+        double[] p1 = rect.get(0, 0);
+        double[] p2 = rect.get(1, 0);
+        double[] p3 = rect.get(2, 0);
+        Vector3 v1 = new Vector3((float)(p1[0]-p2[0]), 0.0f, (float)(p1[1]-p2[1]));
+        Vector3 v2 = new Vector3((float)(p3[0]-p2[0]), 0.0f, (float)(p3[1]-p2[1]));
+        Vector3 crs = v1.crs(v2);
+        return (crs.y > 0);
+    }
 
-        int idx = findOrigin(polygon);
-        //System.out.println("Origin index: " + idx);
-
-        return rectObjs.get(idx);
+    //<---- Handle Found Rectangles --->
 
 
+    private void drawHomography(MatOfPoint2f src) {
+        Mat homography = findHomography(src, homoWorld);
+        warpPerspective(eye, warpedImage, homography, new Size(SCREEN_WIDTH, SCREEN_WIDTH));
     }
 
     private void handleRectangles() {
-
-        count++;
-
         clearActorMapRT();
         for (MatOfPoint2f rect : rects) {
-
-            drawHomography(rect);
+            drawHomography(rect); //puts homography onto warpedImage
             List<MatOfPoint2f> idPolygons = findIdPolygon(); // should only contain 1 element!
-
+            //Extract the id from the polygon
             MatOfPoint3f rectObjCoords = null;
             int theId = -1;
-            double id = -1;
             if (idPolygons.size() == 1) {
                 MatOfPoint2f polygon = idPolygons.get(0);
                 rectObjCoords = getObjCoords(polygon);
-
-                id = polygon.size().height;
-                //System.out.println("Id before: " + id);
-                theId = (int) ((id - 6) / 4.0);       // this works!
+                double id = polygon.size().height;
+                theId = (int) ((id - 6) / 4.0); // this works!
             }
-            //System.out.println("ID after: " + theId);
-
-
-
+            //Set the rotation and translation of the actor of that id.
             Mat rotation = new Mat();
             Mat translation = new Mat();
-
-            //boolean idFound = (id % 4 == 2 && id >= 6 && id <= 22);
             if (rectObjCoords != null && theId <= 4) {
                 solvePnP(rectObjCoords, rect, intrinsics, distortion, rotation, translation, false, ITERATIVE);
-
-
                 actorMap.get(theId).setTranslation(translation);
                 actorMap.get(theId).setRotation(rotation);
             }
@@ -313,38 +284,43 @@ public class CVMain extends ApplicationAdapter {
         renderGraphics();
     }
 
+    //Resets translation and rotation of all Actors.
     private void clearActorMapRT() {
         for(Actor actor : actorMap.values()) {
+            actor.setTranslation(null);
             actor.setTranslation(null);
             actor.setRotation(null);
         }
     }
 
+    //Gives the correct orientation of our square
+    private MatOfPoint3f getObjCoords(MatOfPoint2f polygon) {
+        int idx = findOrigin(polygon);
+        return rectObjs.get(idx);
+    }
+
+    //This returns the index of the squares upper left corner (closest to the left corner in our figure)
     private int findOrigin(MatOfPoint2f polygon) {
         Vector2 polyOrigin = findOrientation(polygon);
         float nearestDist = Float.MAX_VALUE;
         int idx = 0;
-
         for (int i = 0; i < homoWorld.size().height; i++) {
             double[] coords = homoWorld.get(i, 0);
             Vector2 p = new Vector2((float)coords[0], (float)coords[1]);
             float currentDist = p.dst(polyOrigin);
-
             if (nearestDist > currentDist) {
                 nearestDist = currentDist;
                 idx = i;
             }
         }
-
         return idx;
     }
 
+    //Find the upper left corner in our figure
     private Vector2 findOrientation(MatOfPoint2f polygon) {
-
         float maxSum = 0.0f;
         Vector2 maxP = new Vector2();
         int size = (int)polygon.size().height;
-
         for (int i = 0; i < size; i++) {
             double[] p1 = polygon.get(i, 0);
             int i2 = (i+1) % size;
@@ -361,52 +337,19 @@ public class CVMain extends ApplicationAdapter {
                 maxP = new Vector2((float)p2[0], (float)p2[1]);
             }
         }
-
-        //System.out.println(maxP);
         return maxP;
     }
 
-    private boolean isClockwise(MatOfPoint2f rect) {
-        double[] p1 = rect.get(0, 0);
-        double[] p2 = rect.get(1, 0);
-        double[] p3 = rect.get(2, 0);
 
-        Vector3 v1 = new Vector3((float)(p1[0]-p2[0]), 0.0f, (float)(p1[1]-p2[1]));
-        Vector3 v2 = new Vector3((float)(p3[0]-p2[0]), 0.0f, (float)(p3[1]-p2[1]));
-
-        Vector3 crs = v1.crs(v2);
-
-
-        return (crs.y > 0);
-    }
-
-
-
-/*<<<<<<< HEAD
-    private void renderGraphics(int theId) {
-        // render model objects
-        modelBatch.begin(cam);
-        controller.update(Gdx.graphics.getDeltaTime());
-
-
-        //modelInstance.transform.idt();
-        //Vector3 position = new Vector3(0, 0.5f, 0);
-        modelInstance.transform.translate(originPosition);
-=======*/
     private void renderGraphics() {
         Array<ModelInstance> modelInstances = new Array<ModelInstance>();
         for(Actor actor : actorMap.values()) {
             if(actor.isActive()) {
-
-                //UtilAR.setCameraByRT(actor.getRotation(), actor.getTranslation(), cam);
                 ModelInstance modelInstance = actor.getModelInstance();
-                //modelInstance.transform.idt();
                 UtilAR.setTransformByRT(actor.getRotation(), actor.getTranslation(), modelInstance.transform);
                 modelInstance.transform.translate(originPosition);
-                modelInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(actor.getId() / (float) 5, actor.getId() / (float) 5, 0.1f, 1.0f)));
-
+                modelInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(actor.getId() / (float) 5, actor.getId() / (float) 5, 0.1f, 1.0f))); //Måske vi bare skulle sætte dette når actor laves?
                 modelInstances.add(modelInstance);
-
             }
         }
         modelBatch.begin(cam);
@@ -415,9 +358,7 @@ public class CVMain extends ApplicationAdapter {
 
         StageActor stageActor = (StageActor) actorMap.get(0);
         for(Actor actor : actorMap.values()) {
-
             handleCollision(stageActor, actor);
-
         }
     }
 
@@ -442,11 +383,10 @@ public class CVMain extends ApplicationAdapter {
                 System.out.println("stop music for " + actor.getId());
                 soundHandler.setInstrumentState(actor.getId() + "", "off");
             }
-
         }
-
     }
 
+    //<---- LIBGDX main class stuff --->
 
     @Override
     public void resize (int width, int height) {
@@ -455,25 +395,19 @@ public class CVMain extends ApplicationAdapter {
         cam.update();
     }
 
-
-
     @Override
     public void dispose() {
         modelBatch.dispose();
         cap.release();
     }
 
-
-
-    /****** GRAPHICS ******/
-
+    //<---- GRAPHICS --->
 
     private void setupEnvironment() {
         // setup environment
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f,
                 0.4f, 0.4f, 1f));
-
         dirLight = new DirectionalLight();
         dirLight = getDirectionToCubes();
         environment.add(dirLight); //-1f, -0.8f, -0.2f)); //
@@ -486,10 +420,7 @@ public class CVMain extends ApplicationAdapter {
         return dirLight.set(0.8f, 0.8f, 0.8f, dir.x, dir.y, dir.z);
     }
 
-
-
     private void setupCamera() {
-        // setup camera
         cam = new PerspectiveCamera(40, Gdx.graphics.getWidth(),
                 Gdx.graphics.getHeight());
         cam.position.set(3f, 3f, 3f);
@@ -499,6 +430,21 @@ public class CVMain extends ApplicationAdapter {
         cam.far = 300f;
         cam.update();
         UtilAR.setNeutralCamera(cam);
+    }
+
+    //<---- UNUSED --->
+
+    //Used for animations. Not used at the moment
+    private void animateSquare() {
+        controller.setAnimation("Cube|fadeOut", 1, new AnimationController.AnimationListener() {
+            @Override
+            public void onEnd(AnimationController.AnimationDesc animation) {
+                controller.queue("Cube|fadeIn", 1, 1f, null, 0f);
+            }
+            @Override
+            public void onLoop(AnimationController.AnimationDesc animation) {
+            }
+        });
     }
 
 
