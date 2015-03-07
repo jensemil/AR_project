@@ -44,48 +44,29 @@ public class CVMain extends ApplicationAdapter {
     private ModelBuilder modelBuilder;
     private ModelBatch modelBatch;
     private ModelInstance modelInstance;
-
-    private HashMap<Integer, Actor> actorMap;
-
     private AnimationController controller;
-
-
-
-    private MatOfPoint2f warpedImage;
     private Environment environment;
     private Material mat;
     private Vector3 originPosition;
-
-    private boolean foundBoard = false;
     private DirectionalLight dirLight;
 
-    // OpenCV
+    private HashMap<Integer, Actor> actorMap;
 
+
+    // OpenCV
     private VideoCapture cap;
     private MatOfPoint2f eye;
     private MatOfPoint2f corners;
-
-    private List<Mat> calibrationImgs = new ArrayList<Mat>();
-    private List<Mat> calibrationObjectPoints = new ArrayList<Mat>();
-
-    private MatOfPoint3f objectCoords;
-    private MatOfPoint3f calibObjectCoords;
-
+    private MatOfPoint2f warpedImage;
     private Mat intrinsics;
     private MatOfDouble distortion;
-
-    //private double numOfCoords = chessboardSize.width*chessboardSize.height;
     private Size rectSize = new Size(2,2);
     private double numOfCoords = rectSize.width*rectSize.height;
-
     private static int SCREEN_WIDTH = 640;
     private static int SCREEN_HEIGHT = 480;
 
-
     private List<MatOfPoint2f> rects = new ArrayList<MatOfPoint2f>();
-
     private List<MatOfPoint3f> rectObjs;
-
     int count = 0;
     private MatOfPoint2f homoWorld;
 
@@ -93,26 +74,19 @@ public class CVMain extends ApplicationAdapter {
     @Override
 	public void create () {
         // Graphics
-
         originPosition = new Vector3(0.5f, 0.5f, 0.5f);
         //originPosition = new Vector3(0,0,0);
-
         // init model batch - used for rendering
         modelBatch = new ModelBatch();
         // setup model and build cube
         modelBuilder = new ModelBuilder();
-
         setupActorMap();
-
         setupCamera();
         setupEnvironment();
 
-
-
         // OpenCV
 
-
-
+        //The homography matrix
         homoWorld = new MatOfPoint2f();
         homoWorld.alloc(4);
         homoWorld.put(0, 0, 0, 0);
@@ -120,9 +94,9 @@ public class CVMain extends ApplicationAdapter {
         homoWorld.put(2, 0, SCREEN_WIDTH, SCREEN_WIDTH);
         homoWorld.put(3, 0, 0, SCREEN_WIDTH);
 
-        warpedImage = new MatOfPoint2f(); // Mat.eye(SCREEN_WIDTH, SCREEN_WIDTH, CvType.CV_8UC1);
+        warpedImage = new MatOfPoint2f();
 
-        eye = new MatOfPoint2f(); //.eye(128, 128, CvType.CV_8UC1);
+        eye = new MatOfPoint2f();
         corners = new MatOfPoint2f();
 
         // setup video capture
@@ -131,16 +105,11 @@ public class CVMain extends ApplicationAdapter {
         cap.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT,SCREEN_HEIGHT);
 
         // get intrinsics after view capture dimensions are set
-        objectCoords = new MatOfPoint3f();
-        calibObjectCoords = new MatOfPoint3f();
-        objectCoords.alloc((int)numOfCoords);
-        calibObjectCoords.alloc((int)numOfCoords);
         corners.alloc((int)numOfCoords);
         intrinsics = UtilAR.getDefaultIntrinsicMatrix(SCREEN_WIDTH, SCREEN_HEIGHT);
         distortion = UtilAR.getDefaultDistortionCoefficients();
 
         setupRectObjs();
-
 
         //Ensure Camera is ready!
         try {
@@ -148,7 +117,6 @@ public class CVMain extends ApplicationAdapter {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
         if(!cap.isOpened()){
             System.out.println("Video Camera Error");
         }
@@ -156,29 +124,10 @@ public class CVMain extends ApplicationAdapter {
             System.out.println("Video Camera OK");
         }
         soundHandler.start();
-
-
-
     }
 
+    //Creates a hashmap containing all the actors.
     private void setupActorMap() {
-//        // Now create an instance.  Instance holds the positioning data, etc of an instance of your model
-//        modelInstance = new ModelInstance(model);
-//
-//        controller = new AnimationController(modelInstance);
-//
-////        System.out.println(modelInstance.animations.first().id);
-////        System.out.println(modelInstance.animations.get(1).id);
-//
-//        //This is simply to test the animations
-//        Runnable testAnimate = new Runnable() {
-//            @Override
-//            public void run() {
-//                animateSquare();
-//            }
-//        };
-//        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-//        executor.scheduleAtFixedRate(testAnimate, 0, 6, TimeUnit.SECONDS);
         actorMap = new HashMap<Integer, Actor>();
         actorMap.put(0, new StageActor(new ModelInstance(createSquareModel()),0 ));
         actorMap.put(1, new Actor(new ModelInstance(createSquareModel()),1));
@@ -187,10 +136,31 @@ public class CVMain extends ApplicationAdapter {
         actorMap.put(4, new Actor(new ModelInstance(createSquareModel()), 4));
     }
 
+
+    //Creates a square model for an actor
+    private Model createSquareModel() {
+        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
+                0.3f, 1.0f)));
+        mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
+                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
+
+        Model model = modelBuilder.createBox(1f, 1f, 1f, mat, VertexAttributes.Usage.Position
+                | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);
+        return model;
+    }
+
+    //Create a blender 3d model for an actor
+    private Model createModel(String modelFileName) {
+        // Model loader needs a binary json reader to decode
+        UBJsonReader jsonReader = new UBJsonReader();
+        // Create a model loader passing in our json reader
+        G3dModelLoader modelLoader = new G3dModelLoader(jsonReader);
+        Model model = modelLoader.loadModel(Gdx.files.getFileHandle(modelFileName, Files.FileType.Internal));
+        return model;
+    }
+
     private void setupRectObjs() {
-
         rectObjs = new ArrayList<MatOfPoint3f>();
-
         for (int i = 0; i < 4; i++) {
             MatOfPoint3f rectObj = new MatOfPoint3f();
             rectObj.alloc((int)numOfCoords);
@@ -202,69 +172,28 @@ public class CVMain extends ApplicationAdapter {
         }
     }
 
-    private Model createSquareModel() {
-        // setup material with texture
-        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
-                0.3f, 1.0f)));
-        // blending
-        mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
-                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
-
-        Model model = modelBuilder.createBox(1f, 1f, 1f, mat, VertexAttributes.Usage.Position
-                | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);
-        return model;
-    }
-
-    private Model createModel(String modelFileName) {
-        // Model loader needs a binary json reader to decode
-        UBJsonReader jsonReader = new UBJsonReader();
-        // Create a model loader passing in our json reader
-        G3dModelLoader modelLoader = new G3dModelLoader(jsonReader);
-        Model model = modelLoader.loadModel(Gdx.files.getFileHandle(modelFileName, Files.FileType.Internal));
-
-        return model;
-    }
-
     @Override
 	public void render() {
         Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(),
                 Gdx.graphics.getHeight());
 		Gdx.gl.glClearColor(1, 1, 1, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-
-
         dirLight = getDirectionToCubes();
-
-        // read camera data into "eye matrix"
         cap.read(eye);
-        // render eye texture
-        //UtilAR.imDrawBackground(eye);
-        //handleChessboard();
-
-
         findRectangles();
         handleRectangles();
-
-
     }
 
 
 
     private void animateSquare() {
         controller.setAnimation("Cube|fadeOut", 1, new AnimationController.AnimationListener() {
-
             @Override
             public void onEnd(AnimationController.AnimationDesc animation) {
-                // this will be called when the current animation is done.
-                // queue up another animation called "balloon".
-                // Passing a negative to loop count loops forever.  1f for speed is normal speed.
                 controller.queue("Cube|fadeIn", 1, 1f, null, 0f);
             }
-
             @Override
             public void onLoop(AnimationController.AnimationDesc animation) {
-                // TODO Auto-generated method stub
-
             }
         });
     }
