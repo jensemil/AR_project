@@ -66,8 +66,9 @@ public class CVMain extends ApplicationAdapter {
     private static int SCREEN_HEIGHT = 480;
 
     private List<MatOfPoint2f> rects = new ArrayList<MatOfPoint2f>();
-    private List<MatOfPoint3f> rectObjs;
     private MatOfPoint2f homoWorld;
+
+    private RotationHandler rotationHandler;
 
 
     @Override
@@ -108,7 +109,8 @@ public class CVMain extends ApplicationAdapter {
         intrinsics = UtilAR.getDefaultIntrinsicMatrix(SCREEN_WIDTH, SCREEN_HEIGHT);
         distortion = UtilAR.getDefaultDistortionCoefficients();
 
-        setupRectObjs();
+        rotationHandler = new RotationHandler((int)numOfCoords, homoWorld);
+
 
         //Ensure Camera is ready!
         try {
@@ -158,19 +160,6 @@ public class CVMain extends ApplicationAdapter {
         return model;
     }
 
-    //This is used to get the right orientation
-    private void setupRectObjs() {
-        rectObjs = new ArrayList<MatOfPoint3f>();
-        for (int i = 0; i < 4; i++) {
-            MatOfPoint3f rectObj = new MatOfPoint3f();
-            rectObj.alloc((int)numOfCoords);
-            rectObj.put(i % 4,0, 0, 0, 0);
-            rectObj.put((i+1) % 4,0, 1, 0, 0);
-            rectObj.put((i+2) % 4,0, 1, 0, 1);
-            rectObj.put((i+3) % 4,0, 0, 0, 1);
-            rectObjs.add(rectObj);
-        }
-    }
 
     @Override
 	public void render() {
@@ -268,7 +257,7 @@ public class CVMain extends ApplicationAdapter {
             int theId = -1;
             if (idPolygons.size() == 1) {
                 MatOfPoint2f polygon = idPolygons.get(0);
-                rectObjCoords = getObjCoords(polygon);
+                rectObjCoords = rotationHandler.getObjCoords(polygon);
                 double id = polygon.size().height;
                 theId = (int) ((id - 6) / 4.0); // this works!
             }
@@ -293,52 +282,6 @@ public class CVMain extends ApplicationAdapter {
         }
     }
 
-    //Gives the correct orientation of our square
-    private MatOfPoint3f getObjCoords(MatOfPoint2f polygon) {
-        int idx = findOrigin(polygon);
-        return rectObjs.get(idx);
-    }
-
-    //This returns the index of the squares upper left corner (closest to the left corner in our figure)
-    private int findOrigin(MatOfPoint2f polygon) {
-        Vector2 polyOrigin = findOrientation(polygon);
-        float nearestDist = Float.MAX_VALUE;
-        int idx = 0;
-        for (int i = 0; i < homoWorld.size().height; i++) {
-            double[] coords = homoWorld.get(i, 0);
-            Vector2 p = new Vector2((float)coords[0], (float)coords[1]);
-            float currentDist = p.dst(polyOrigin);
-            if (nearestDist > currentDist) {
-                nearestDist = currentDist;
-                idx = i;
-            }
-        }
-        return idx;
-    }
-
-    //Find the upper left corner in our figure
-    private Vector2 findOrientation(MatOfPoint2f polygon) {
-        float maxSum = 0.0f;
-        Vector2 maxP = new Vector2();
-        int size = (int)polygon.size().height;
-        for (int i = 0; i < size; i++) {
-            double[] p1 = polygon.get(i, 0);
-            int i2 = (i+1) % size;
-            double[] p2 = polygon.get(i2, 0);
-            int i3 = (i+2) % size;
-            double[] p3 = polygon.get(i3, 0);
-
-            Vector3 v1 = new Vector3((float)(p1[0]-p2[0]), 0.0f, (float)(p1[1]-p2[1]));
-            Vector3 v2 = new Vector3((float)(p3[0]-p2[0]), 0.0f, (float)(p3[1]-p2[1]));
-
-            float sum = v1.len() + v2.len();
-            if (sum > maxSum) {
-                maxSum = sum;
-                maxP = new Vector2((float)p2[0], (float)p2[1]);
-            }
-        }
-        return maxP;
-    }
 
 
     private void renderGraphics() {
