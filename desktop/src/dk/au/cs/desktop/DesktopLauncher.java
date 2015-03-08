@@ -4,6 +4,7 @@ import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
 import dk.au.cs.CVChessboard;
 import dk.au.cs.CVMain;
+import dk.au.cs.TrainMarkers;
 import org.opencv.core.Core;
 
 public class DesktopLauncher {

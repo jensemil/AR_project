@@ -91,8 +91,14 @@ public class MarkerHandler {
         Mat detectedEdges = Mat.eye(128, 128, CvType.CV_8UC1);
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         Mat hierachy = new Mat();
+        //Make Binary
         Imgproc.cvtColor(input, detectedEdges, Imgproc.COLOR_RGB2GRAY);
-        threshold(detectedEdges, detectedEdges, 100, 255, THRESH_BINARY);
+        threshold(detectedEdges, detectedEdges, 130, 255, THRESH_BINARY);
+        //Remove noice, and holes in shapes
+        Mat kernel = getStructuringElement(0, new Size(5,5));
+        morphologyEx(detectedEdges, detectedEdges,MORPH_OPEN , kernel);
+        morphologyEx(detectedEdges, detectedEdges,MORPH_CLOSE , kernel);
+        //Find contours
         findContours(detectedEdges, contours, hierachy, RETR_LIST, CHAIN_APPROX_SIMPLE);
         return contours;
     }
