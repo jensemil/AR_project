@@ -17,23 +17,11 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
 import com.badlogic.gdx.graphics.g3d.utils.AnimationController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.UBJsonReader;
-import org.opencv.core.*;
-import org.opencv.highgui.Highgui;
-import org.opencv.highgui.VideoCapture;
 
-import org.opencv.imgproc.Imgproc;
-
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
-
-import static org.opencv.calib3d.Calib3d.*;
-import static org.opencv.imgproc.Imgproc.*;
 
 public class CVMain extends ApplicationAdapter {
 
@@ -77,26 +65,23 @@ public class CVMain extends ApplicationAdapter {
         setupCamera();
         setupEnvironment();
 
-
-
         soundHandler.start();
     }
 
     //Creates a hashmap containing all the actors.
     private void setupActorMap() {
         actorMap = new HashMap<Integer, Actor>();
-        actorMap.put(0, new StageActor(new ModelInstance(createSquareModel()),0 ));
-        actorMap.put(1, new Actor(new ModelInstance(createSquareModel()),1));
-        actorMap.put(2, new Actor(new ModelInstance(createSquareModel()), 2));
-        actorMap.put(3, new Actor(new ModelInstance(createSquareModel()), 3));
-        actorMap.put(4, new Actor(new ModelInstance(createSquareModel()), 4));
+        actorMap.put(0, new StageActor(new ModelInstance(createSquareModel(0)),0 ));
+        actorMap.put(1, new Actor(new ModelInstance(createSquareModel(1)),1));
+        actorMap.put(2, new Actor(new ModelInstance(createSquareModel(2)), 2));
+        actorMap.put(3, new Actor(new ModelInstance(createSquareModel(3)), 3));
+        actorMap.put(4, new Actor(new ModelInstance(createSquareModel(4)), 4));
     }
 
 
     //Creates a square model for an actor
-    private Model createSquareModel() {
-        mat = new Material(ColorAttribute.createDiffuse(new Color(0.3f, 0.3f,
-                0.3f, 1.0f)));
+    private Model createSquareModel(int id) {
+        mat = new Material(ColorAttribute.createDiffuse(new Color(id / (float) 5, id / (float) 5, 0.1f, 1.0f)));
         mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
                 GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
 
@@ -132,18 +117,17 @@ public class CVMain extends ApplicationAdapter {
 
 
     private void renderGraphics() {
-        Array<ModelInstance> modelInstances = new Array<ModelInstance>();
+        Array<ModelInstance> instancesToRender = new Array<ModelInstance>();
         for(Actor actor : actorMap.values()) {
             if(actor.isActive()) {
                 ModelInstance modelInstance = actor.getModelInstance();
                 UtilAR.setTransformByRT(actor.getRotation(), actor.getTranslation(), modelInstance.transform);
                 modelInstance.transform.translate(originPosition);
-                modelInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(actor.getId() / (float) 5, actor.getId() / (float) 5, 0.1f, 1.0f))); //Måske vi bare skulle sætte dette når actor laves?
-                modelInstances.add(modelInstance);
+                instancesToRender.add(modelInstance);
             }
         }
         modelBatch.begin(cam);
-        modelBatch.render(modelInstances);
+        modelBatch.render(instancesToRender);
         modelBatch.end();
 
         StageActor stageActor = (StageActor) actorMap.get(0);
