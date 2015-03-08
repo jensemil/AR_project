@@ -38,10 +38,13 @@ public class MarkerHandler {
     private MatOfDouble distortion;
     private HashMap<Integer, Actor> actorMap;
 
+    private ClassifySquareStrategy squareStrategy;
+
     public MarkerHandler(int SCREEN_WIDTH, int SCREEN_HEIGHT, HashMap<Integer, Actor> actorMap) {
         this.SCREEN_WIDTH = SCREEN_WIDTH;
         this.SCREEN_HEIGHT = SCREEN_HEIGHT;
         this.actorMap = actorMap;
+        squareStrategy = new SimpleClassifySquareStrategy();
         //The homography matrix
         homoWorld = new MatOfPoint2f();
         homoWorld.alloc(4);
@@ -93,7 +96,7 @@ public class MarkerHandler {
         Mat hierachy = new Mat();
         //Make Binary
         Imgproc.cvtColor(input, detectedEdges, Imgproc.COLOR_RGB2GRAY);
-        threshold(detectedEdges, detectedEdges, 130, 255, THRESH_BINARY);
+        threshold(detectedEdges, detectedEdges, 140, 255, THRESH_BINARY);
         //Remove noice, and holes in shapes
         Mat kernel = getStructuringElement(0, new Size(5,5));
         morphologyEx(detectedEdges, detectedEdges,MORPH_OPEN , kernel);
@@ -114,7 +117,7 @@ public class MarkerHandler {
             approxPolyDP(cont2f, polygon, 8, true);
             MatOfPoint polygonCvt = new MatOfPoint(polygon.toArray());
             // check for rectangles
-            if(polygon.size().height == 4 && contourArea(polygonCvt) > 4000 && isContourConvex(polygonCvt) && isClockwise(polygon)) {
+            if(polygonCvt.size().height >= 4 && squareStrategy.isSquare(polygonCvt, polygon) && isClockwise(polygon)) {
                 rectContours.add(polygonCvt);
                 rects.add(polygon);
             }
