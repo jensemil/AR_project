@@ -223,7 +223,7 @@ public class TrainMarkers extends ApplicationAdapter {
 
     private void prepareImage() {
         Imgproc.cvtColor(eye, preparedImage, Imgproc.COLOR_RGB2GRAY);
-        threshold(preparedImage, preparedImage, 150, 255, THRESH_BINARY);
+        threshold(preparedImage, preparedImage, 170, 255, THRESH_BINARY);
         Mat kernel = getStructuringElement(0, new Size(5,5));
         morphologyEx(preparedImage, preparedImage,MORPH_OPEN , kernel);
         morphologyEx(preparedImage, preparedImage,MORPH_CLOSE , kernel);
