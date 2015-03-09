@@ -1,5 +1,8 @@
 package dk.au.cs;
 
+import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.math.Matrix4;
+import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector3;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
@@ -22,6 +25,7 @@ import static org.opencv.imgproc.Imgproc.*;
  */
 public class MarkerHandler {
 
+    private final CVMain delegate;
     private List<MatOfPoint2f> rects = new ArrayList<MatOfPoint2f>();
     private RotationHandler rotationHandler;
     private MatOfPoint2f homoWorld;
@@ -40,7 +44,8 @@ public class MarkerHandler {
 
     private ClassifySquareStrategy squareStrategy;
 
-    public MarkerHandler(int SCREEN_WIDTH, int SCREEN_HEIGHT, HashMap<Integer, Actor> actorMap) {
+    public MarkerHandler(int SCREEN_WIDTH, int SCREEN_HEIGHT, HashMap<Integer, Actor> actorMap, CVMain delegate) {
+        this.delegate = delegate;
         this.SCREEN_WIDTH = SCREEN_WIDTH;
         this.SCREEN_HEIGHT = SCREEN_HEIGHT;
         this.actorMap = actorMap;
@@ -97,7 +102,7 @@ public class MarkerHandler {
         //Make Binary
         Imgproc.cvtColor(input, detectedEdges, Imgproc.COLOR_RGB2GRAY);
         threshold(detectedEdges, detectedEdges, 140, 255, THRESH_BINARY);
-        //Remove noice, and holes in shapes
+        //Remove noise, and holes in shapes
         Mat kernel = getStructuringElement(0, new Size(5,5));
         morphologyEx(detectedEdges, detectedEdges,MORPH_OPEN , kernel);
         morphologyEx(detectedEdges, detectedEdges,MORPH_CLOSE , kernel);
@@ -117,7 +122,8 @@ public class MarkerHandler {
             approxPolyDP(cont2f, polygon, 8, true);
             MatOfPoint polygonCvt = new MatOfPoint(polygon.toArray());
             // check for rectangles
-            if(polygonCvt.size().height >= 4 && squareStrategy.isSquare(polygonCvt, polygon) && isClockwise(polygon)) {
+
+            if(polygonCvt.size().height >= 4 && squareStrategy.isSquare(polygonCvt, polygon) && !isClockwise(polygon)) {
                 rectContours.add(polygonCvt);
                 rects.add(polygon);
             }
@@ -163,16 +169,18 @@ public class MarkerHandler {
     //<---- Handle Found Rectangles --->
 
 
-    private void drawHomography(MatOfPoint2f src) {
+    private Mat drawHomography(MatOfPoint2f src) {
         Mat homography = findHomography(src, homoWorld);
         warpPerspective(eye, warpedImage, homography, new Size(SCREEN_WIDTH, SCREEN_WIDTH));
+        return homography;
     }
 
     public void handleRectangles() {
         clearActorMapRT();
         for (MatOfPoint2f rect : rects) {
-            drawHomography(rect); //puts homography onto warpedImage
+            Mat homography = drawHomography(rect); // side effect - warps using homography on warpedImage
             List<MatOfPoint2f> idPolygons = findIdPolygon(); // should only contain 1 element!
+
             //Extract the id from the polygon
             MatOfPoint3f rectObjCoords = null;
             int theId = -1;
@@ -189,8 +197,41 @@ public class MarkerHandler {
                 solvePnP(rectObjCoords, rect, intrinsics, distortion, rotation, translation, false, ITERATIVE);
                 actorMap.get(theId).setTranslation(translation);
                 actorMap.get(theId).setRotation(rotation);
+
+                // the id that is the spinner
+                if (theId == 2) {
+
+                    handleSpinner(rotation);
+                }
             }
         }
+    }
+
+    private void handleSpinner(Mat rotation) {
+        // -- not working ---
+        //double cosTheta = homography.get(0,0)[0];
+        //double theta = Math.acos(cosTheta);
+        //System.out.println("homo angle = " + theta);
+
+        // get rotation matrix
+        Matrix4 rotMat = new Matrix4();
+        Mat idVec = Mat.ones(3, 1, rotation.type());
+        UtilAR.setTransformByRT(rotation, idVec, rotMat);
+        float[] r = rotMat.getValues();
+
+        // Euler angle - find r31 and r11 - rotation around y-axis
+        double Ry = Math.atan2(r[6], r[0]);
+        /*System.out.println("------");
+        System.out.println();
+        for (int i = 0; i < 9; i++) {
+            System.out.print(r[i] + " ");
+            if (i % 3 == 2) System.out.println();
+        }
+        System.out.println();
+        System.out.println("from " + r[6] + " and " + r[0]);
+        System.out.println("rotation = " + Ry);
+         */
+        delegate.setSoundLevel(Ry);
     }
 
     //Resets translation and rotation of all Actors.

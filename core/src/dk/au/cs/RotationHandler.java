@@ -23,10 +23,12 @@ public class RotationHandler {
         for (int i = 0; i < 4; i++) {
             MatOfPoint3f rectObj = new MatOfPoint3f();
             rectObj.alloc(numOfCoords);
+
+            // JEG ---- now counter-clockwise!!
             rectObj.put(i % 4,0, 0, 0, 0);
-            rectObj.put((i+1) % 4,0, 1, 0, 0);
+            rectObj.put((i+1) % 4,0, 0, 0, 1);
             rectObj.put((i+2) % 4,0, 1, 0, 1);
-            rectObj.put((i+3) % 4,0, 0, 0, 1);
+            rectObj.put((i+3) % 4,0, 1, 0, 0);
             rectObjs.add(rectObj);
         }
         this.homoWorld = homoWorld;

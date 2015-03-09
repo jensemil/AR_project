@@ -61,7 +61,7 @@ public class CVMain extends ApplicationAdapter {
         // setup model and build cube
         modelBuilder = new ModelBuilder();
         setupActorMap();
-        markerHandler = new MarkerHandler(SCREEN_WIDTH, SCREEN_HEIGHT, actorMap);
+        markerHandler = new MarkerHandler(SCREEN_WIDTH, SCREEN_HEIGHT, actorMap, this);
         setupCamera();
         setupEnvironment();
 
@@ -90,15 +90,7 @@ public class CVMain extends ApplicationAdapter {
         return model;
     }
 
-    //Create a blender 3d model for an actor
-    private Model createModel(String modelFileName) {
-        // Model loader needs a binary json reader to decode
-        UBJsonReader jsonReader = new UBJsonReader();
-        // Create a model loader passing in our json reader
-        G3dModelLoader modelLoader = new G3dModelLoader(jsonReader);
-        Model model = modelLoader.loadModel(Gdx.files.getFileHandle(modelFileName, Files.FileType.Internal));
-        return model;
-    }
+
 
 
     @Override
@@ -137,11 +129,14 @@ public class CVMain extends ApplicationAdapter {
     }
 
     private void handleCollision(StageActor stageActor, Actor actor) {
-        if (stageActor.isActive() &&
+        boolean actorIsCollidingWithStage = stageActor.isActive() &&
                 actor.isActive() &&
                 stageActor.checkForCollision(actor) &&
-                stageActor.getId() < actor.getId()) {
+                stageActor.getId() < actor.getId();
 
+        if (actorIsCollidingWithStage) {
+
+            // if not already added
             if (!stageActor.hasActor(actor)) {
                 stageActor.addActor(actor);
                 // start music of actor
@@ -151,6 +146,8 @@ public class CVMain extends ApplicationAdapter {
 
 
         } else {
+
+            // if actor was already added
             if (stageActor.hasActor(actor)) {
                 stageActor.removeActor(actor);
                 //stop music of actor
@@ -158,6 +155,12 @@ public class CVMain extends ApplicationAdapter {
                 soundHandler.setInstrumentState(actor.getId() + "", "off");
             }
         }
+    }
+
+    public void setSoundLevel(double value) {
+        double level = value / Math.PI + 0.2; // conversion
+        soundHandler.setSoundLevel(level);
+        System.out.println("soundLevel = " + soundHandler.getSoundLevel());
     }
 
     //<---- LIBGDX main class stuff --->
@@ -207,6 +210,17 @@ public class CVMain extends ApplicationAdapter {
     }
 
     //<---- UNUSED --->
+
+
+    //Create a blender 3d model for an actor
+    private Model createModel(String modelFileName) {
+        // Model loader needs a binary json reader to decode
+        UBJsonReader jsonReader = new UBJsonReader();
+        // Create a model loader passing in our json reader
+        G3dModelLoader modelLoader = new G3dModelLoader(jsonReader);
+        Model model = modelLoader.loadModel(Gdx.files.getFileHandle(modelFileName, Files.FileType.Internal));
+        return model;
+    }
 
     //Used for animations. Not used at the moment
     private void animateSquare() {

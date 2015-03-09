@@ -11,6 +11,7 @@ import java.net.Socket;
 public class SoundHandler {
     private BufferedWriter writer;
     private OutputStream os;
+    private double soundLevel = 0.5;
 
     public SoundHandler() {
         Socket socket = null;
@@ -44,6 +45,7 @@ public class SoundHandler {
             os = socket.getOutputStream();
             writer = new BufferedWriter(new OutputStreamWriter(os,"UTF-8"));
         } catch (IOException e1) {
+            System.err.println("Output stream error");
             e1.printStackTrace();
         }
     }
@@ -71,4 +73,11 @@ public class SoundHandler {
         }
     }
 
+    public void setSoundLevel(double soundLevel) {
+        this.soundLevel = soundLevel;
+    }
+
+    public double getSoundLevel() {
+        return soundLevel;
+    }
 }
