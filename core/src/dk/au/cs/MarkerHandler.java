@@ -123,7 +123,7 @@ public class MarkerHandler {
             MatOfPoint polygonCvt = new MatOfPoint(polygon.toArray());
             // check for rectangles
 
-            if(polygonCvt.size().height >= 4 && squareStrategy.isSquare(polygonCvt, polygon) && !isClockwise(polygon)) {
+            if(polygonCvt.size().height >= 4 && squareStrategy.isSquare(polygonCvt, polygon) && isClockwise(polygon)) {
                 rectContours.add(polygonCvt);
                 rects.add(polygon);
             }

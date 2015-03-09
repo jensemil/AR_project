@@ -26,9 +26,9 @@ public class RotationHandler {
 
             // JEG ---- now counter-clockwise!!
             rectObj.put(i % 4,0, 0, 0, 0);
-            rectObj.put((i+1) % 4,0, 0, 0, 1);
+            rectObj.put((i+1) % 4,0, 1, 0, 0);
             rectObj.put((i+2) % 4,0, 1, 0, 1);
-            rectObj.put((i+3) % 4,0, 1, 0, 0);
+            rectObj.put((i+3) % 4,0, 0, 0, 1);
             rectObjs.add(rectObj);
         }
         this.homoWorld = homoWorld;

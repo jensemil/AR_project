@@ -30,10 +30,9 @@ public class CVMain extends ApplicationAdapter {
     private PerspectiveCamera cam;
     private ModelBuilder modelBuilder;
     private ModelBatch modelBatch;
-    private ModelInstance modelInstance;
     private AnimationController controller;
     private Environment environment;
-    private Material mat;
+
     private Vector3 originPosition;
     private DirectionalLight dirLight;
 
@@ -71,25 +70,12 @@ public class CVMain extends ApplicationAdapter {
     //Creates a hashmap containing all the actors.
     private void setupActorMap() {
         actorMap = new HashMap<Integer, Actor>();
-        actorMap.put(0, new StageActor(new ModelInstance(createSquareModel(0)),0 ));
-        actorMap.put(1, new Actor(new ModelInstance(createSquareModel(1)),1));
-        actorMap.put(2, new Actor(new ModelInstance(createSquareModel(2)), 2));
-        actorMap.put(3, new Actor(new ModelInstance(createSquareModel(3)), 3));
-        actorMap.put(4, new Actor(new ModelInstance(createSquareModel(4)), 4));
+        actorMap.put(0, new StageActor(0, modelBuilder));
+        actorMap.put(1, new Actor(1, modelBuilder));
+        actorMap.put(2, new Actor(2, modelBuilder));
+        actorMap.put(3, new Actor(3, modelBuilder));
+        actorMap.put(4, new Actor(4, modelBuilder));
     }
-
-
-    //Creates a square model for an actor
-    private Model createSquareModel(int id) {
-        mat = new Material(ColorAttribute.createDiffuse(new Color(id / (float) 5, id / (float) 5, 0.1f, 1.0f)));
-        mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
-                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
-
-        Model model = modelBuilder.createBox(1f, 1f, 1f, mat, VertexAttributes.Usage.Position
-                | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);
-        return model;
-    }
-
 
 
 
@@ -113,9 +99,22 @@ public class CVMain extends ApplicationAdapter {
         for(Actor actor : actorMap.values()) {
             if(actor.isActive()) {
                 ModelInstance modelInstance = actor.getModelInstance();
+                ModelInstance levelModelInstance = actor.getLevelModelInstance();
                 UtilAR.setTransformByRT(actor.getRotation(), actor.getTranslation(), modelInstance.transform);
+                UtilAR.setTransformByRT(actor.getRotation(), actor.getTranslation(), levelModelInstance.transform);
+
+                // cube model
                 modelInstance.transform.translate(originPosition);
+
+                // level bar
+                Vector3 s = new Vector3(.5f, .2f, (float)actor.getLevel());
+                levelModelInstance.transform.translate(1.5f, 0.f, 0.f);
+                levelModelInstance.transform.translate(s.x*originPosition.x, s.y*originPosition.y, s.z*originPosition.z);
+                levelModelInstance.transform.scale(s.x, s.y, s.z);
+
+
                 instancesToRender.add(modelInstance);
+                instancesToRender.add(levelModelInstance);
             }
         }
         modelBatch.begin(cam);
@@ -160,6 +159,7 @@ public class CVMain extends ApplicationAdapter {
     public void setSoundLevel(double value, int id) {
         double level = value / Math.PI + 0.2; // conversion
         soundHandler.setSoundLevel(level, id);
+        actorMap.get(id).setLevel(level);
         System.out.println("soundLevel = " + level + " (for id=" + id + ")");
     }
 

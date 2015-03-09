@@ -1,6 +1,7 @@
 package dk.au.cs;
 
-import com.badlogic.gdx.graphics.g3d.ModelInstance;
+
+import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,8 +10,8 @@ public class StageActor extends Actor {
 
     private List<Actor> actors;
 
-    public StageActor(ModelInstance model, int id) {
-        super(model, id);
+    public StageActor(int id, ModelBuilder modelBuilder) {
+        super(id, modelBuilder);
         actors = new ArrayList<Actor>();
     }
 

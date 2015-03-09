@@ -1,5 +1,6 @@
 package dk.au.cs;
 
+import com.badlogic.gdx.math.Vector2;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 
@@ -15,4 +16,5 @@ public class SimpleClassifySquareStrategy implements ClassifySquareStrategy{
     public boolean isSquare(MatOfPoint polygonCvt, MatOfPoint2f polygon) {
         return (polygon.size().height == 4 && contourArea(polygonCvt) > 4000 && isContourConvex(polygonCvt));
     }
+
 }
