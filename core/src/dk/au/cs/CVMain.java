@@ -160,7 +160,7 @@ public class CVMain extends ApplicationAdapter {
         double level = value / Math.PI + 0.2; // conversion
         soundHandler.setSoundLevel(level, id);
         actorMap.get(id).setLevel(level);
-        System.out.println("soundLevel = " + level + " (for id=" + id + ")");
+        //System.out.println("soundLevel = " + level + " (for id=" + id + ")");
     }
 
     //<---- LIBGDX main class stuff --->
