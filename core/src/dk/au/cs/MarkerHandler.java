@@ -101,7 +101,7 @@ public class MarkerHandler {
         Mat hierachy = new Mat();
         //Make Binary
         Imgproc.cvtColor(input, detectedEdges, Imgproc.COLOR_RGB2GRAY);
-        threshold(detectedEdges, detectedEdges, 140, 255, THRESH_BINARY);
+        threshold(detectedEdges, detectedEdges, 150, 255, THRESH_BINARY);
         //Remove noise, and holes in shapes
         Mat kernel = getStructuringElement(0, new Size(5,5));
         morphologyEx(detectedEdges, detectedEdges,MORPH_OPEN , kernel);
