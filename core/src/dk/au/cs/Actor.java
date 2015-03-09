@@ -5,18 +5,22 @@ import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
 import com.badlogic.gdx.graphics.g3d.utils.AnimationController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.UBJsonReader;
 import org.opencv.core.Mat;
+
+import java.util.ArrayList;
 
 public class Actor {
 
@@ -27,6 +31,8 @@ public class Actor {
     private int id;
     private double level;
     private AnimationController controller;
+
+    private Texture img;
 
     public Actor(int id, ModelBuilder modelBuilder, String modelFileName) {
         this.id = id;
@@ -86,9 +92,23 @@ public class Actor {
 
     //Creates a square model for an actor
     private Model createSquareModel(int id, ModelBuilder modelBuilder) {
-        Material mat = new Material(ColorAttribute.createDiffuse(new Color(id / (float) 5, id / (float) 5, 0.1f, 1.0f)));
+        // setup material with texture
+        ArrayList<String> textures = new ArrayList<String>() ;
+        textures.add("drum.jpg");
+        textures.add("drum.jpg");
+        textures.add("bass.jpg");
+        textures.add("synth.jpg");
+        textures.add("vocal.jpg");
+
+        img = new Texture(textures.get(id));
+        img.bind();
+
+        Material mat = new Material(ColorAttribute.createDiffuse(1.f, 1.f, 1.f, 1.f)); //new Color(id / (float) 5, id / (float) 5, 0.1f, 1.0f)));
+        mat.set(new TextureAttribute(TextureAttribute.Diffuse, img));
+        // blending
         mat.set(new BlendingAttribute(GL20.GL_SRC_ALPHA,
-                GL20.GL_ONE_MINUS_SRC_ALPHA, 0.9f));
+                GL20.GL_ONE_MINUS_SRC_ALPHA, 1.f));
+
 
         Model model = modelBuilder.createBox(1f, 1f, 1f, mat, VertexAttributes.Usage.Position
                 | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);

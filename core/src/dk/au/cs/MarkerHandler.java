@@ -1,6 +1,7 @@
 package dk.au.cs;
 
 import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector3;
@@ -44,6 +45,8 @@ public class MarkerHandler {
 
     private ClassifySquareStrategy squareStrategy;
 
+
+
     public MarkerHandler(int SCREEN_WIDTH, int SCREEN_HEIGHT, HashMap<Integer, Actor> actorMap, CVMain delegate) {
         this.delegate = delegate;
         this.SCREEN_WIDTH = SCREEN_WIDTH;
@@ -65,7 +68,7 @@ public class MarkerHandler {
         corners = new MatOfPoint2f();
 
         // setup video capture
-        cap = new VideoCapture(2);
+        cap = new VideoCapture(0);
         cap.set(Highgui.CV_CAP_PROP_FRAME_WIDTH,SCREEN_WIDTH);
         cap.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT,SCREEN_HEIGHT);
 
