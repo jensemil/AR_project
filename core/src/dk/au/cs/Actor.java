@@ -1,6 +1,8 @@
 package dk.au.cs;
 
 
+import com.badlogic.gdx.Files;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.VertexAttributes;
@@ -9,8 +11,11 @@ import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
+import com.badlogic.gdx.graphics.g3d.utils.AnimationController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.UBJsonReader;
 import org.opencv.core.Mat;
 
 public class Actor {
@@ -21,11 +26,51 @@ public class Actor {
     private ModelInstance model;
     private int id;
     private double level;
+    private AnimationController controller;
 
-    public Actor(int id, ModelBuilder modelBuilder) {
-        this.model = new ModelInstance(createSquareModel(id, modelBuilder));
+    public Actor(int id, ModelBuilder modelBuilder, String modelFileName) {
         this.id = id;
-        this.levelModel = new ModelInstance(createLevelModel(id, modelBuilder));
+        if(modelFileName.equals("")) {
+            this.model = new ModelInstance(createSquareModel(id, modelBuilder));
+            this.levelModel = new ModelInstance(createLevelModel(id, modelBuilder));
+        } else {
+            this.model = new ModelInstance(createModel(modelFileName));
+            controller = new AnimationController(this.model);
+            animateSquare();
+            this.levelModel = new ModelInstance(createLevelModel(id, modelBuilder));
+        }
+
+    }
+
+    public void animate() {
+        if(controller != null) {
+            controller.update(Gdx.graphics.getDeltaTime());
+        }
+    }
+
+    //Create a blender 3d model for an actor
+    private Model createModel(String modelFileName) {
+        // Model loader needs a binary json reader to decode
+        UBJsonReader jsonReader = new UBJsonReader();
+        // Create a model loader passing in our json reader
+        G3dModelLoader modelLoader = new G3dModelLoader(jsonReader);
+        Model model = modelLoader.loadModel(Gdx.files.getFileHandle(modelFileName, Files.FileType.Internal));
+
+
+        return model;
+    }
+
+    //Used for animations. Not used at the moment
+    private void animateSquare() {
+        controller.setAnimation("Cube|cubeAction", 1, new AnimationController.AnimationListener() {
+            @Override
+            public void onEnd(AnimationController.AnimationDesc animation) {
+                controller.queue("Cube|cubeAction", -1, 1f, null, 0f);
+            }
+            @Override
+            public void onLoop(AnimationController.AnimationDesc animation) {
+            }
+        });
     }
 
     private Model createLevelModel(int id, ModelBuilder modelBuilder) {
