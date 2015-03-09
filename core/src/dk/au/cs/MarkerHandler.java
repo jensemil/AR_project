@@ -42,12 +42,14 @@ public class MarkerHandler {
     private Mat intrinsics;
     private MatOfDouble distortion;
     private HashMap<Integer, Actor> actorMap;
+    private Mat homoGraphyImage;
 
     private ClassifySquareStrategy squareStrategy;
 
 
 
     public MarkerHandler(int SCREEN_WIDTH, int SCREEN_HEIGHT, HashMap<Integer, Actor> actorMap, CVMain delegate) {
+        homoGraphyImage = Mat.eye(128, 128, CvType.CV_8UC1);
         this.delegate = delegate;
         this.SCREEN_WIDTH = SCREEN_WIDTH;
         this.SCREEN_HEIGHT = SCREEN_HEIGHT;
@@ -98,17 +100,21 @@ public class MarkerHandler {
     //<---- Finding our rectangles --->
 
     //This is where opecv find the actual contours
-    private List<MatOfPoint> findContoursFromEdges(MatOfPoint2f input) {
+    private List<MatOfPoint> findContoursFromEdges(MatOfPoint2f input, boolean isRectangle) {
         Mat detectedEdges = Mat.eye(128, 128, CvType.CV_8UC1);
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         Mat hierachy = new Mat();
         //Make Binary
         Imgproc.cvtColor(input, detectedEdges, Imgproc.COLOR_RGB2GRAY);
-        threshold(detectedEdges, detectedEdges, 150, 255, THRESH_BINARY);
+        threshold(detectedEdges, detectedEdges, 140, 255, THRESH_BINARY);
         //Remove noise, and holes in shapes
-        Mat kernel = getStructuringElement(0, new Size(5,5));
+        Mat kernel = getStructuringElement(0, new Size(3,3));
         morphologyEx(detectedEdges, detectedEdges,MORPH_OPEN , kernel);
         morphologyEx(detectedEdges, detectedEdges,MORPH_CLOSE , kernel);
+        if(isRectangle == false) {
+            detectedEdges.copyTo(homoGraphyImage);
+            //UtilAR.imShow(homoGraphyImage);
+        }
         //Find contours
         findContours(detectedEdges, contours, hierachy, RETR_LIST, CHAIN_APPROX_SIMPLE);
         return contours;
@@ -116,7 +122,7 @@ public class MarkerHandler {
 
     //This is where we find our rectangles and put them in the field -> rects
     public void findRectangles() {
-        List<MatOfPoint> contours = findContoursFromEdges(eye);
+        List<MatOfPoint> contours = findContoursFromEdges(eye, true);
         List<MatOfPoint> rectContours = new ArrayList<MatOfPoint>();
         rects = new ArrayList<MatOfPoint2f>();
         for(MatOfPoint cont : contours) {
@@ -148,7 +154,7 @@ public class MarkerHandler {
 
     //This method is a lot like findRectangles, but now for the id polygons in the homography
     private List<MatOfPoint2f> findIdPolygon() {
-        List<MatOfPoint> contours = findContoursFromEdges(warpedImage);
+        List<MatOfPoint> contours = findContoursFromEdges(warpedImage, false);
         List<MatOfPoint2f> idPolygons = new ArrayList<MatOfPoint2f>();
         List<MatOfPoint> idPolygonsCvt = new ArrayList<MatOfPoint>();
         for(MatOfPoint cont : contours) {
@@ -194,7 +200,7 @@ public class MarkerHandler {
                 theId = (int) ((id - 6) / 2.0); // this works!
 
                 //System.out.println("found corner value " + id);
-                System.out.println("Found id = " + theId);
+                //System.out.println("Found id = " + theId);
 
             }
             //Set the rotation and translation of the actor of that id.

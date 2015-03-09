@@ -124,7 +124,7 @@ public class Actor {
         float dist = pos1.dst(pos2);
         //System.out.println("distance between " + this.getId() + " and " + other.getId() + ": " + dist);
 
-        return dist < 2.f;
+        return dist < 10.f;
     }
 
     public boolean isActive() {
