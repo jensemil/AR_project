@@ -199,15 +199,13 @@ public class MarkerHandler {
                 actorMap.get(theId).setRotation(rotation);
 
                 // the id that is the spinner
-                if (theId == 2) {
+                handleSpinner(rotation, theId);
 
-                    handleSpinner(rotation);
-                }
             }
         }
     }
 
-    private void handleSpinner(Mat rotation) {
+    private void handleSpinner(Mat rotation, int theId) {
         // -- not working ---
         //double cosTheta = homography.get(0,0)[0];
         //double theta = Math.acos(cosTheta);
@@ -231,7 +229,7 @@ public class MarkerHandler {
         System.out.println("from " + r[6] + " and " + r[0]);
         System.out.println("rotation = " + Ry);
          */
-        delegate.setSoundLevel(Ry);
+        delegate.setSoundLevel(Ry, theId);
     }
 
     //Resets translation and rotation of all Actors.

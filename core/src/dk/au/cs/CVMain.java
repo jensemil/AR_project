@@ -157,10 +157,10 @@ public class CVMain extends ApplicationAdapter {
         }
     }
 
-    public void setSoundLevel(double value) {
+    public void setSoundLevel(double value, int id) {
         double level = value / Math.PI + 0.2; // conversion
-        soundHandler.setSoundLevel(level);
-        System.out.println("soundLevel = " + soundHandler.getSoundLevel());
+        soundHandler.setSoundLevel(level, id);
+        System.out.println("soundLevel = " + level + " (for id=" + id + ")");
     }
 
     //<---- LIBGDX main class stuff --->

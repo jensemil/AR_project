@@ -109,7 +109,7 @@ public class TrainMarkers extends ApplicationAdapter {
                         cap.read(eye);
                         cap.read(eye);
                         prepareImage();
-                        //prepareImageOld();
+                        prepareImageOld();
                         Gdx.graphics.requestRendering();
                         break;
                     case Input.Keys.ENTER:

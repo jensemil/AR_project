@@ -11,7 +11,6 @@ import java.net.Socket;
 public class SoundHandler {
     private BufferedWriter writer;
     private OutputStream os;
-    private double soundLevel = 0.5;
 
     public SoundHandler() {
         Socket socket = null;
@@ -73,11 +72,15 @@ public class SoundHandler {
         }
     }
 
-    public void setSoundLevel(double soundLevel) {
-        this.soundLevel = soundLevel;
+    public void setSoundLevel(double soundLevel, int id) {
+        try {
+            writer.write(id + " " + soundLevel + ";" + "\r\n");
+            writer.flush();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public double getSoundLevel() {
-        return soundLevel;
-    }
 }
