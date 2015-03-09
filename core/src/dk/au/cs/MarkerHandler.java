@@ -65,7 +65,7 @@ public class MarkerHandler {
         corners = new MatOfPoint2f();
 
         // setup video capture
-        cap = new VideoCapture(0);
+        cap = new VideoCapture(2);
         cap.set(Highgui.CV_CAP_PROP_FRAME_WIDTH,SCREEN_WIDTH);
         cap.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT,SCREEN_HEIGHT);
 
