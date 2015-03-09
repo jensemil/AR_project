@@ -188,7 +188,11 @@ public class MarkerHandler {
                 MatOfPoint2f polygon = idPolygons.get(0);
                 rectObjCoords = rotationHandler.getObjCoords(polygon);
                 double id = polygon.size().height;
-                theId = (int) ((id - 6) / 4.0); // this works!
+                theId = (int) ((id - 6) / 2.0); // this works!
+
+                //System.out.println("found corner value " + id);
+                System.out.println("Found id = " + theId);
+
             }
             //Set the rotation and translation of the actor of that id.
             Mat rotation = new Mat();
