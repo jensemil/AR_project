@@ -70,11 +70,11 @@ public class CVMain extends ApplicationAdapter {
     //Creates a hashmap containing all the actors.
     private void setupActorMap() {
         actorMap = new HashMap<Integer, Actor>();
-        actorMap.put(0, new StageActor(0, modelBuilder));
-        actorMap.put(1, new Actor(1, modelBuilder));
-        actorMap.put(2, new Actor(2, modelBuilder));
-        actorMap.put(3, new Actor(3, modelBuilder));
-        actorMap.put(4, new Actor(4, modelBuilder));
+        actorMap.put(0, new StageActor(0, modelBuilder, "figure1.g3db"));
+        actorMap.put(1, new Actor(1, modelBuilder, ""));
+        actorMap.put(2, new Actor(2, modelBuilder, ""));
+        actorMap.put(3, new Actor(3, modelBuilder, ""));
+        actorMap.put(4, new Actor(4, modelBuilder, ""));
     }
 
 
@@ -89,7 +89,9 @@ public class CVMain extends ApplicationAdapter {
         markerHandler.readCam();
         markerHandler.findRectangles();
         markerHandler.handleRectangles();
+        actorMap.get(0).animate();
         renderGraphics();
+
     }
 
 

@@ -74,7 +74,7 @@ public class SoundHandler {
 
     public void setSoundLevel(double soundLevel, int id) {
         try {
-            writer.write(soundLevel + " " + id + ";" + "\r\n");
+            writer.write("soundLevel" + " " + id + " " + soundLevel +";" + "\r\n");
             writer.flush();
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();

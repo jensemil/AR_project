@@ -10,8 +10,8 @@ public class StageActor extends Actor {
 
     private List<Actor> actors;
 
-    public StageActor(int id, ModelBuilder modelBuilder) {
-        super(id, modelBuilder);
+    public StageActor(int id, ModelBuilder modelBuilder, String fileName) {
+        super(id, modelBuilder, fileName);
         actors = new ArrayList<Actor>();
     }
 
