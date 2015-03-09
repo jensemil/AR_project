@@ -105,18 +105,13 @@ public class CVMain extends ApplicationAdapter {
                 UtilAR.setTransformByRT(actor.getRotation(), actor.getTranslation(), modelInstance.transform);
                 UtilAR.setTransformByRT(actor.getRotation(), actor.getTranslation(), levelModelInstance.transform);
 
-                // cube model
-                modelInstance.transform.translate(originPosition);
-
-                // level bar
-                Vector3 s = new Vector3(.5f, .2f, (float)actor.getLevel());
-                levelModelInstance.transform.translate(1.5f, 0.f, 0.f);
-                levelModelInstance.transform.translate(s.x*originPosition.x, s.y*originPosition.y, s.z*originPosition.z);
-                levelModelInstance.transform.scale(s.x, s.y, s.z);
-
+                // level dependent model scaling
+                Vector3 s = new Vector3((float)actor.getLevel(), (float)actor.getLevel(), (float)actor.getLevel());
+                modelInstance.transform.translate(originPosition.x, originPosition.y * s.y, originPosition.z);
+                modelInstance.transform.scale(s.x, s.y, s.z);
 
                 instancesToRender.add(modelInstance);
-                instancesToRender.add(levelModelInstance);
+
             }
         }
         modelBatch.begin(cam);
